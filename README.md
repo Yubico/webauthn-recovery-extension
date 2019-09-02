@@ -2,7 +2,7 @@
 
 Web Authentication solves many problems in secure online authentication, but
 also introduces some new challenges. One of the greatest challenges is loss of
-an authenticator - what can the user do so that they isn't locked out of their
+an authenticator - what can the user do to prevent being locked out of their
 account if they lose an authenticator?
 
 The current workaround to this problem is to have the user register more than
