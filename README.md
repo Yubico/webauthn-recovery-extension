@@ -30,12 +30,13 @@ easily correlatable between RPs or accounts, undermining much of the privacy
 protections in WebAuthn.
 
 In this document we propose a key agreement scheme which allows a pair of
-authenticators to agree on an EC key pair in such a way the main authenticator
-can generate nondeterministic public keys, but only the backup authenticator can
-derive the corresponding private keys. We present the scheme in the context of a
-practical application as a WebAuthn extension for account recovery. This enables
-the use case of placing the backup authenticator in a bank vault, for example,
-while retaining WebAuthn's privacy protection of non-correlatable public keys.
+authenticators to agree on an EC key pair in such a way that the main
+authenticator can generate nondeterministic public keys, but only the backup
+authenticator can derive the corresponding private keys. We present the scheme
+in the context of a practical application as a WebAuthn extension for account
+recovery. This enables the use case of storing the backup authenticator in a
+secure location, while maintaining WebAuthn's privacy protection of
+non-correlatable public keys.
 
 
 # The key agreement scheme
@@ -150,24 +151,24 @@ As a result of these procedures, Bob will have derived `p` such that
 # Application: WebAuthn extension
 
 This section proposes an application of the above key agreement scheme as a
-WebAuthn extension for recovery credentials. The second subsection describes how
-the key agreement scheme is implemented in the YubiKey.
+WebAuthn extension for recovery credentials. The second subsection proposes the
+CTAP2 commands used to export and import the recovery seed.
 
 
 ## Recovery Credentials Extension (`recovery`)
 
 This extension allows for recovery credentials to be registered with an RP,
-which can be used for account recovery in the case of a lost/destroyed main
-authenticator. This is done by associating one or more backup authenticators
-with the main authenticator, the latter of which is then able to provide
-additional credentials for account recovery to the RP without involving the
-backup authenticators. The mechanism of setting this up is outside of the scope
-of this extension, however a `state` counter is defined as follows:
+which can be used for account recovery in the case of a lost or destroyed _main
+authenticator_. This is done by associating one or more _backup authenticators_
+with the main authenticator, after which the latter can provide additional
+credentials for account recovery to the RP without involving the backup
+authenticators.
 
-Let `state` be initialized to 0. Performing a device reset re-initializes
+The main authenticator keeps a _recovery credentials state counter_ defined as
+follows. Let `state` be initialized to 0. Performing a device reset resets
 `state` to 0. When the set of registered backup authenticators for the device
-changes (e.g., on adding/removing a backup authenticator, including adding the
-first backup authenticator) `state` is incremented by one.
+changes (e.g., on adding or removing a backup authenticator, including adding
+the first backup authenticator) `state` is incremented by one.
 
 The `state` counter is stored by the main authenticator, and allows the RP to
 automatically detect when the set of registered recovery credentials needs to be
@@ -240,44 +241,82 @@ If `action` is
 
 - `"state"`,
 
-  set the extension output to the CBOR encoding of `{"action": "state", "state":
-  <state counter>}`.
+ 1. Let `state` be the current value of the _recovery credentials state counter_.
+
+ 2. Set the extension output to the CBOR encoding of `{"action": "state",
+    "state": state}`.
+
 
 - `"generate"`,
 
-  generate one recovery credential for each associated backup authenticator,
-  formatting these as a CBOR array of [attested credential data][att-cred-data]
-  byte arrays. Set the extension output to the CBOR encoding of `{"action":
-  "generate", "state": <state counter>, "creds": <list of recovery
-  credentials>}`.
+ 1. Let `creds` be an empty list.
+
+ 2. For each recovery seed and AAGUID pair `(S, aaguid)` stored in this
+    authenticator:
+
+     1. Generate an ephemeral EC P-256 key pair: `e, E`.
+
+     2. Use `HKDF(ECDH(e, S))` to derive `credKey`, `macKey` (both 32 byte
+        keys).
+
+     3. If `credKey >= n`, where `n` is the order of the P-256 curve, start
+        over from 1.
+
+     4. Let `P = (credKey * G) + S`, where * and + are EC point multiplication
+        and addition, and `G` is the generator of the P-256 curve.
+
+     5. If `P` is the point at infinity, start over from 1.
+
+     6. Set `credentialId = E || LEFT(HMAC(macKey, E || rp.id), 16)`, where
+        `LEFT(X, n)` is the first `n` bytes of the byte array `X`.
+
+     7. Let `attCredData` be a new [attested credential data][att-cred-data]
+        structure with the following member values:
+
+        - **aaguid**: `aaguid`.
+        - **credentialIdLength**: The byte length of `credentialId`.
+        - **credentialId**: `credentialId`.
+        - **credentialPublicKey**: `P`.
+
+     8. Add `attCredData` to `creds`.
+
+ 3. Let `state` be the current value of the _recovery credentials state counter_.
+
+ 4. Set the extension output to the CBOR encoding of `{"action": "generate",
+    "state": state, "creds": creds}`.
+
 
 - `"recover"`,
 
-  locate a usable recovery credential from the credential IDs in
-  `allowCredentials` in the extension input.
+ 1. For each `cred` in `allowCredentials`:
 
-  - If no usable credential is found, fail the authenticatorMakeCredential
-    operation.
+     1. Let `E = DROP_RIGHT(cred.id, 16)`, where `DROP_RIGHT(X, n)` is the byte
+        array `X` without the last `n` bytes.
 
-  - Let `creds` be an empty list.
+     2. Use `HKDF(ECDH(s, E))` to derive `credKey`, `macKey`.
 
-  - Let `authenticatorDataWithoutExtensions` be the [authenticator
-    data][authdata] that will be returned from this registration operation, but
-    without the `extensions` part. The `ED` flag in
-    `authenticatorDataWithoutExtensions` MUST be set even though
-    `authenticatorDataWithoutExtensions` does not include extension data.
+     3. If `cred.id` is not exactly equal to `E || LEFT(HMAC(macKey, E ||
+        rp.id))`, _continue_.
 
-  - For each usable credential found:
+     4. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
+        curve.
 
-     1. Let `cred` be the found credential.
+     5. Let `authenticatorDataWithoutExtensions` be the [authenticator
+        data][authdata] that will be returned from this registration operation,
+        but without the `extensions` part. The `ED` flag in
+        `authenticatorDataWithoutExtensions` MUST be set to 1 even though
+        `authenticatorDataWithoutExtensions` does not include extension data.
 
-     2. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
-        clientDataHash` using `cred`.
+     6. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
+        clientDataHash` using `p`.
 
-     3. Add `{"credId": <credential ID of cred>, "sig": <sig>}` to `creds`.
+     7. Let `state` be the current value of the _recovery credentials state
+        counter_.
 
-  - Set the extension output to the CBOR encoding of `{"action": "recover",
-    "creds": <creds>, "state": <state counter>}`.
+     8. Set the extension output to the CBOR encoding of `{"action": "recover",
+        "creds": creds, "state": state}` and end extension processing.
+
+ 2. Return an error code equivalent to ERR_XXX.
 
 
 ### Authenticator extension output
@@ -292,6 +331,7 @@ A CBOR map with contents as defined above.
       ArrayBuffer sig;
     }
 
+
 ### Recovery credential considerations
 
 - The RP MUST be very explicit in notifying the user when recovery credentials
@@ -300,52 +340,51 @@ A CBOR map with contents as defined above.
   number of backup authenticators associated with the main authenticator.
 
 - The RP SHOULD clearly display information about registered recovery
-  credentials, just as it does with standard credentials.
+  credentials, just as it does with standard credentials. For example, the RP
+  MAY use the AAGUIDs of recovery credentials to indicate the (alleged) model of
+  the corresponding managing authenticator.
 
-- The same security considerations apply to recovery credentials as to standard
-  credentials.
+- All security and privacy considerations for standard credentials also apply to
+  recovery credentials.
 
 - Although recovery credentials are issued by the main authenticator, they can
   only ever be used by the backup authenticator.
 
 - Recovery credentials are scoped to a specific RP ID, and the RP SHOULD
-  also associate them with a specific main credential.
+  also associate each recovery credential with a specific main credential.
 
 - Recovery credentials can only be used in registration ceremonies where the
   recovery extension is present, with `action == "recover"`.
 
-- A main authenticator should ensure that the recovery credentials it issues on
-  behalf of a backup authenticator are authentic.
+- A main authenticator MAY refuse to import a recovery seed without a trusted
+  attestation signature, to reduce the risk that an RP rejects the recovery
+  credential that would later be generated by the backup authenticator.
+
+- Recovery credentials cannot be used as resident credentials, since they by
+  definition cannot be stored in the backup authenticator.
 
 
-## YubiKey implementation
+## Authenticator operations
 
-The following describes how YubiKeys implement the recovery extension via the
-key agreement scheme described above. It is assumed that each YubiKey has an
-attestation certificate signed by a single root CA certificate, and that each
-YubiKey has access to the public key of that root.
-
-
-### Vendor specific commands
-
-The following vendor specific commands are added. They are not exposed via any
-browser API.
+The following CTAP2 commands are added. They are not exposed via any browser
+API.
 
 NOTE: the `s, S` key pair is used in ECDH as well as to derive the recovery
 credential key pair. If desired, two distinct key pairs can be used, increasing
 the amount of data in the Export/Import commands below.
 
 
-#### Export Recovery Seed
+### Export Recovery Seed
 
-Exports a seed which can be imported into other YubiKeys, enabling them to
-register credentials on behalf of the exporting YubiKey, for the purpose of
-account recovery.
+Exports a seed which can be imported into other authenticators, enabling them to
+register credentials on behalf of the exporting authenticator, for the purpose
+of account recovery.
 
 This command has no arguments.
 
  1. If the recovery functionality is uninitialized, generate a new EC P-256 key
-    pair and store it as `s, S` (these get erased on RESET).
+    pair and store it as `s, S`. The `authenticatorReset` command MUST erase `s`
+    and `S`.
 
  2. Using the attestation certificate private key, create and output the
     following as a CBOR map:
@@ -358,94 +397,76 @@ This command has no arguments.
         }
 
 
-#### Import Recovery Seed
+### Import Recovery Seed
 
-Imports a recovery seed, enabling this YubiKey to issue recovery credentials on
-behalf of a backup YubiKey. Multiple Recovery Seeds can be imported into a
-YubiKey, limited by storage space. Resetting a YubiKey removes all stored
-recovery seeds, and resets the `state` counter to 0.
+Imports a recovery seed, enabling this authenticator to issue recovery
+credentials on behalf of a backup authenticator. Multiple recovery seeds can be
+imported into an authenticator, limited by storage space. Resetting the
+authenticator removes all stored recovery seeds, and resets the `state` counter
+to 0.
 
-This command takes the output of _Export Recovery Seed_ from another YubiKey as
-input.
+This command takes the output of _Export Recovery Seed_ from another
+authenticator as input.
 
 CTAP2_ERR_XXX represents some not yet specified error code.
 
- 1. Using the root CA public key, validate the signature of `attestation_cert`.
-    If invalid, return CTAP2_ERR_XXX.
+ 1. If the authenticator has no storage space available to import a recovery
+    seed, return CTAP2_ERR_XXX.
 
- 2. Extract the public key from `attestation_cert` and use it to validate the
+ 2. Extract the public key from `attestation_cert` and use it to verify the
     signature (key `4`) in the input. If invalid, return CTAP2_ERR_XXX.
 
- 3. Store `(S, aaguid)` internally.
+ 3. OPTIONALLY, perform this sub-step:
 
- 4. Increment the `state` counter by one (the counter's initial value is 0).
+     1. Using a vendor-specific store of trusted attestation CA certificates,
+        verify the signature of `attestation_cert`. If invalid or untrusted,
+        OPTIONALLY return CTAP2_ERR_XXX.
 
+ 4. Store `(S, aaguid)` internally.
 
-### Main YubiKey extension processing
-
-For `action == "state"`, return the value of the `state` counter.
-
-For `action == "generate"`, the following process is used to generate a recovery
-credential from a recovery seed:
-
- 1. Generate an ephemeral EC P-256 key pair: `e, E`.
-
- 2. Use HKDF(ECDH(`e`, `S`)) to derive `cred_key`, `mac_key` (both 32 byte
-    keys).
-
- 3. If `cred_key` >= `n`, where `n` is the order of the P-256 curve, start
-    over from 1.
-
- 4. Calculate `P` = (`cred_key` * `G`) + `S`, where * and + are EC point
-    multiplication and addition, and `G` is the generator of the P-256 curve.
-
- 5. If `P` is the point at infinity, start over from 1.
-
- 6. Set `credential_id` = `E` || LEFT(HMAC(`mac_key`, `E || rp.id`), 16),
-    where LEFT(`X`, `n`) is the first `n` bytes of the byte array `X`.
-
- 7. The recovery credential is the P-256 public key `P`, with the credential id
-    `credential_id`.
+ 5. Increment the `state` counter by one (the counter's initial value is 0).
 
 
-### Recovery YubiKey extension processing
 
-For `action == "recover"`, the following process is used by the recovery YubiKey
-to calculate the private key needed:
+## RP operations
 
- 1. Let `E` = DROP_RIGHT(`credential_id`, 16), where DROP_RIGHT(`X`, `n`) is the
-    byte array `X` without the last `n` bytes.
-
- 2. Use HKDF(ECDH(`s`, `E`)) to derive `cred_key`, `mac_key`.
-
- 3. Verify that `credential_id` == `E` || LEFT(HMAC(`mac_key`, `E || rp.id`)).
-    If not, the credential isn't valid for this YubiKey (or the RP is wrong),
-    and it isn't processed further.
-
- 4. Calculate `p` = `cred_key` + `s` mod `n`, where `n` is the order of the
-    P-256 curve.
-
- 5. The recovery credential private key is `p`, which can now be used to create
-    a signature.
-
-
-## RP support
-
-An RP supporting this extension SHOULD include the extension the `action =
-"state"` value whenever performing standard registration or authentication
-ceremony. There are two cases where the response indicates that the RP should
-initiate recovery credential registration (action `"generate"`), which are:
+An RP supporting this extension SHOULD include the extension with `action:
+"state"` whenever performing a registration or authentication ceremony. There
+are two cases where the response indicates that the RP SHOULD initiate recovery
+credential registration (`action: "generate"`), which are:
 
 - Upon successful `create()`, if `state` > 0.
 - Upon successful `get()`, if `state` > `old_state`, where `old_state` is the
   previous value for `state` that the RP has seen for the used credential.
 
-To initiate recovery credential registration, the RP performs a `get()`
-operation with `action = "generate"`. Upon a successful response, the returned
-list of recovery credentials is stored, associated with the main credential.
-Any prior recovery credentials for that main credential are replaced.
 
-If the user initiates device recovery, the RP performs the following procedure:
+### Registering recovery credentials
+
+To register new backup credentials for a given main credential, or replace the
+existing backup credentials with updated ones, the RP performs the following
+procedure:
+
+ 1. Initiate an `get()` operation and set the extension `"recovery": {"action": "generate"}`.
+
+ 2. Let `pkc` be the PublicKeyCredential response from the client. If the
+    operation fails, abort the ceremony with an error.
+
+ 3. In step 15 of the RP Operation to [Verify an Authentication
+    Assertion][rp-auth-ext-processing], perform the following steps:
+
+     1. Let `extOutputs = pkc.response.authenticatorData.extensions`.
+
+     2. Store `(extOutputs["recovery"].state, extOutputs["recovery"].creds)`
+        associated with `pkc.id`. If such a pair is already stored associated
+        with `pkc.id`, overwrite it.
+
+ 4. Continue with the remaining steps of the standard authentication ceremony.
+
+
+### Using a recovery credential to replace a lost main credential
+
+To authenticate the user with a recovery credential and create a new main
+credential, the RP performs the following procedure:
 
  1. Ask the user which credential to recover. Let `mainCred` be the chosen
     credential.
@@ -461,26 +482,36 @@ If the user initiates device recovery, the RP performs the following procedure:
           "allowCredentials": <allowCredentials as computed above>
         }
 
- 4. Wait for the response from the client. If the operation fails, abort this
-    procedure with an error.
+ 4. Let `pkc` be the PublicKeyCredential response from the client. If the
+    operation fails, abort the ceremony with an error.
 
- 5. Let `publicKey` be the public key for the recovery credential identified by
-    the credential ID `credId` in the extension output.
+ 5. In step 14 of the RP Operation to [Register a New
+    Credential][rp-reg-ext-processing], perform the following steps:
 
- 5. Let `authenticatorDataWithoutExtensions` be the authenticator data in the
-    PublicKeyCredential response, but without the extensions part. The `ED` flag
-    in `authenticatorDataWithoutExtensions` MUST be set even though
-    `authenticatorDataWithoutExtensions` does not include the extension outputs.
+     1. Let `extOutputs = pkc.response.authenticatorData.extensions`.
 
- 6. Using `publicKey`, verify that `sig` in the extension output is a valid
-    signature over `authenticatorDataWithoutExtensions || clientDataHash`.
+     2. Let `publicKey` be the stored public key for the recovery credential
+        identified by the credential ID `extOutputs["recovery"].credId`.
 
- 7. Finish the registration ceremony as usual. This means a new credential has
-    now been registered using the backup authenticator.
+     3. Let `authenticatorDataWithoutExtensions` be
+        `pkc.response.authenticatorData`, but without the `extensions` part. The
+        `ED` flag in `authenticatorDataWithoutExtensions` MUST be set to 1 even
+        though `authenticatorDataWithoutExtensions` does not include the
+        extension outputs.
 
- 8. Revoke `mainCred` and all recovery credentials associated with it.
+     6. Using `publicKey`, verify that `extOutputs["recovery"].sig` is a valid
+        signature over `authenticatorDataWithoutExtensions || clientDataHash`.
+        If the signature is invalid, fail the registration ceremony.
 
- 9. If `state` in the extension output is greater than 0, the RP SHOULD initiate
+ 7. Continue with the remaining steps of the standard registration ceremony.
+    This means a new credential has now been registered using the backup
+    authenticator.
+
+ 8. Revoke `mainCred` and all recovery credentials associated with it. This step
+    and the registration of the new credential SHOULD be performed as an atomic
+    operation.
+
+ 9. If `extOutputs["recovery"].state` is greater than 0, the RP SHOULD initiate
     recovery credential registration (`action = "generate"`) for the newly
     registered credential.
 
@@ -493,3 +524,5 @@ and no longer usable.
 
 [authdata]: https://w3c.github.io/webauthn/#authenticator-data
 [att-cred-data]: https://w3c.github.io/webauthn/#attested-credential-data
+[rp-auth-ext-processing]: https://w3c.github.io/webauthn/#sctn-verifying-assertion
+[rp-reg-ext-processing]: https://w3c.github.io/webauthn/#sctn-registering-a-new-credential
