@@ -314,7 +314,8 @@ If `action` is
         counter_.
 
      8. Set the extension output to the CBOR encoding of `{"action": "recover",
-        "creds": creds, "state": state}` and end extension processing.
+        "credId": cred.id, "sig": sig, "state": state}` and end extension
+        processing.
 
  2. Return an error code equivalent to ERR_XXX.
 
