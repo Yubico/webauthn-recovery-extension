@@ -260,24 +260,36 @@ If `action` is
 
            1. Generate an ephemeral EC P-256 key pair: `e, E`.
 
-           2. Use `HKDF(ECDH(e, S))` to derive `credKey`, `macKey` (both 32 byte
-              keys).
+           2. Let `ikm = ECDH(e, S)`. Let `ikm_x` be the X coordinate of `ikm`,
+              encoded as a byte string of length 32 as described in
+              [SEC1][sec1], section 2.3.7.
 
-           3. If `credKey >= n`, where `n` is the order of the P-256 curve,
+           3. Let `okm` be 64 bytes of output keying material from [HKDF][hkdf]
+              with the arguments:
+
+              - `salt`: Not set.
+              - `IKM`: `ikm_x`.
+              - `info`: Not set.
+              - `L`: 64.
+
+              Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
+              32), 32)`.
+
+           4. If `credKey >= n`, where `n` is the order of the P-256 curve,
               start over from 1.
 
-           4. Let `P = (credKey * G) + S`, where * and + are EC point
+           5. Let `P = (credKey * G) + S`, where * and + are EC point
               multiplication and addition, and `G` is the generator of the P-256
               curve.
 
-           5. If `P` is the point at infinity, start over from 1.
+           6. If `P` is the point at infinity, start over from 1.
 
-           6. Let `rpIdHash` be the SHA-256 hash of `rpId`.
+           7. Let `rpIdHash` be the SHA-256 hash of `rpId`.
 
-           7. Let `S_enc` be `E` encoded as described in [SEC 1][sec1], section
+           8. Let `S_enc` be `E` encoded as described in [SEC 1][sec1], section
               2.3.3, using point compression.
 
-           8. Set `credentialId = alg || E_enc || LEFT(HMAC(macKey, alg || E_enc ||
+           9. Set `credentialId = alg || E_enc || LEFT(HMAC(macKey, alg || E_enc ||
               rpIdHash), 16)`, where `LEFT(X, n)` is the first `n` bytes of the byte
               array `X`.
 
@@ -317,23 +329,36 @@ If `action` is
 
            2. Let `E` be the P-256 public key decoded from the compressed point `E_enc`.
 
-           3. Use `HKDF(ECDH(s, E))` to derive `credKey`, `macKey`.
+           3. Let `ikm = ECDH(s, E)`. Let `ikm_x` be the X coordinate of `ikm`,
+              encoded as a byte string of length 32 as described in
+              [SEC1][sec1], section 2.3.7.
 
-           4. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
+           4. Let `okm` be 64 bytes of output keying material from [HKDF][hkdf]
+              with the arguments:
 
-           5. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
+              - `salt`: Not set.
+              - `IKM`: `ikm_x`.
+              - `info`: Not set.
+              - `L`: 64.
+
+              Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
+              32), 32)`.
+
+           5. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
+
+           6. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
               || E || rpIdHash), 16)`, _continue_.
 
-           6. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
+           7. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
               curve.
 
-           7. Let `authenticatorDataWithoutExtensions` be the [authenticator
+           8. Let `authenticatorDataWithoutExtensions` be the [authenticator
               data][authdata] that will be returned from this registration operation,
               but without the `extensions` part. The `ED` flag in
               `authenticatorDataWithoutExtensions` MUST be set to 1 even though
               `authenticatorDataWithoutExtensions` does not include extension data.
 
-           8. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
+           9. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
               clientDataHash` using `p`.
 
         - anything else:
@@ -595,6 +620,7 @@ and no longer usable.
 [att-cred-data]: https://w3c.github.io/webauthn/#attested-credential-data
 [authdata]: https://w3c.github.io/webauthn/#authenticator-data
 [ctap2-canon]: https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#ctap2-canonical-cbor-encoding-form
+[hkdf]: https://tools.ietf.org/html/rfc5869
 [rfc3279]: https://tools.ietf.org/html/rfc3279.html
 [rp-auth-ext-processing]: https://w3c.github.io/webauthn/#sctn-verifying-assertion
 [rp-reg-ext-processing]: https://w3c.github.io/webauthn/#sctn-registering-a-new-credential
