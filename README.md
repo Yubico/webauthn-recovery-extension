@@ -251,24 +251,34 @@ If `action` is
 
  1. Let `creds` be an empty list.
 
- 2. For each recovery seed and AAGUID pair `(S, aaguid)` stored in this
-    authenticator:
+ 2. For each algorithm ID, AAGUID and recovery seed tuple `(alg, aaguid, S)`
+    stored in this authenticator:
 
-     1. Generate an ephemeral EC P-256 key pair: `e, E`.
+     1. If `alg` equals
 
-     2. Use `HKDF(ECDH(e, S))` to derive `credKey`, `macKey` (both 32 byte
-        keys).
+        - 0:
 
-     3. If `credKey >= n`, where `n` is the order of the P-256 curve, start
-        over from 1.
+           1. Generate an ephemeral EC P-256 key pair: `e, E`.
 
-     4. Let `P = (credKey * G) + S`, where * and + are EC point multiplication
-        and addition, and `G` is the generator of the P-256 curve.
+           2. Use `HKDF(ECDH(e, S))` to derive `credKey`, `macKey` (both 32 byte
+              keys).
 
-     5. If `P` is the point at infinity, start over from 1.
+           3. If `credKey >= n`, where `n` is the order of the P-256 curve,
+              start over from 1.
 
-     6. Set `credentialId = E || LEFT(HMAC(macKey, E || rp.id), 16)`, where
-        `LEFT(X, n)` is the first `n` bytes of the byte array `X`.
+           4. Let `P = (credKey * G) + S`, where * and + are EC point
+              multiplication and addition, and `G` is the generator of the P-256
+              curve.
+
+           5. If `P` is the point at infinity, start over from 1.
+
+           6. Set `credentialId = alg || E || LEFT(HMAC(macKey, alg || E ||
+              rp.id), 16)`, where `LEFT(X, n)` is the first `n` bytes of the byte
+              array `X`.
+
+        - anything else:
+
+           1. Return CTAP2_ERR_XXX.
 
      7. Let `attCredData` be a new [attested credential data][att-cred-data]
         structure with the following member values:
@@ -290,32 +300,43 @@ If `action` is
 
  1. For each `cred` in `allowCredentials`:
 
-     1. Let `E = DROP_RIGHT(cred.id, 16)`, where `DROP_RIGHT(X, n)` is the byte
-        array `X` without the last `n` bytes.
+     1. Let `alg = LEFT(cred.id, 1)`.
 
-     2. Use `HKDF(ECDH(s, E))` to derive `credKey`, `macKey`.
+     2. If `alg` equals
 
-     3. If `cred.id` is not exactly equal to `E || LEFT(HMAC(macKey, E ||
-        rp.id))`, _continue_.
+        - 0:
 
-     4. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
-        curve.
+           1. Let `E = DROP_LEFT(DROP_RIGHT(cred.id, 16), 1)`, where `DROP_LEFT(X, n)`
+              is the byte array `X` without the first `n` bytes and `DROP_RIGHT(X, n)`
+              is the byte array `X` without the last `n` bytes.
 
-     5. Let `authenticatorDataWithoutExtensions` be the [authenticator
-        data][authdata] that will be returned from this registration operation,
-        but without the `extensions` part. The `ED` flag in
-        `authenticatorDataWithoutExtensions` MUST be set to 1 even though
-        `authenticatorDataWithoutExtensions` does not include extension data.
+           2. Use `HKDF(ECDH(s, E))` to derive `credKey`, `macKey`.
 
-     6. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
-        clientDataHash` using `p`.
+           3. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
+              || E || rp.id))`, _continue_.
 
-     7. Let `state` be the current value of the _recovery credentials state
+           4. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
+              curve.
+
+           5. Let `authenticatorDataWithoutExtensions` be the [authenticator
+              data][authdata] that will be returned from this registration operation,
+              but without the `extensions` part. The `ED` flag in
+              `authenticatorDataWithoutExtensions` MUST be set to 1 even though
+              `authenticatorDataWithoutExtensions` does not include extension data.
+
+           6. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
+              clientDataHash` using `p`.
+
+        - anything else:
+
+           1. Return CTAP2_ERR_XXX.
+
+     9. Let `state` be the current value of the _recovery credentials state
         counter_.
 
-     8. Set the extension output to the CBOR encoding of `{"action": "recover",
-        "credId": cred.id, "sig": sig, "state": state}` and end extension
-        processing.
+    10. Set the extension output to the CBOR encoding of `{"action":
+        "recover", "credId": cred.id, "sig": sig, "state": state}` and end
+        extension processing.
 
  2. Return an error code equivalent to ERR_XXX.
 
@@ -381,21 +402,35 @@ Exports a seed which can be imported into other authenticators, enabling them to
 register credentials on behalf of the exporting authenticator, for the purpose
 of account recovery.
 
-This command has no arguments.
+This command takes the following arguments:
 
- 1. If the recovery functionality is uninitialized, generate a new EC P-256 key
-    pair and store it as `s, S`. The `authenticatorReset` command MUST erase `s`
-    and `S`.
+- `algs`: A CBOR array of unsigned 8-bit integers.
 
- 2. Using the attestation certificate private key, create and output the
-    following as a CBOR map:
+ 1. For each `alg` in `algs`:
 
-        {
-          1: attestation_cert,  # DER encoded X509 certificate as a byte string.
-          2: aaguid,  # Device AAGUID as a byte string.
-          3: S  # Public key from above, encoded as a COSE key.
-          4: sign(attestation_key, aaguid || S)  # ECDSA signature as a byte string (S in COSE form).
-        }
+     1. If `alg` equals:
+
+        - 0:
+
+           1. If the recovery functionality is uninitialized, generate a new EC
+              P-256 key pair and store it as `s, S`. The `authenticatorReset`
+              command MUST erase `s` and `S`.
+
+           2. Return the following output encoded as a CBOR map:
+
+                  {
+                    1: alg  # Identifier for the key agreement scheme
+                    2: attestation_cert,  # DER encoded X509 certificate as a byte string.
+                    3: aaguid,  # Device AAGUID as a byte string.
+                    4: sign(attestation_key, aaguid || S)  # ECDSA signature as a byte string (S in COSE form).
+                    -1: S  # Public key from above, encoded as a COSE key.
+                  }
+
+        - anything else:
+
+           1. _Continue_.
+
+ 2. Return CTAP2_ERR_XXX.
 
 
 ### Import Recovery Seed
@@ -406,27 +441,40 @@ imported into an authenticator, limited by storage space. Resetting the
 authenticator removes all stored recovery seeds, and resets the `state` counter
 to 0.
 
-This command takes the output of _Export Recovery Seed_ from another
-authenticator as input.
+This command takes the following arguments:
+
+- `payload`: The output of _Export Recovery Seed_ from another authenticator.
 
 CTAP2_ERR_XXX represents some not yet specified error code.
 
  1. If the authenticator has no storage space available to import a recovery
     seed, return CTAP2_ERR_XXX.
 
- 2. Extract the public key from `attestation_cert` and use it to verify the
-    signature (key `4`) in the input. If invalid, return CTAP2_ERR_XXX.
+ 2. Let `alg = payload[1]`, `attestation_cert = payload[2]`, `aaguid =
+    payload[3]`, `sig = payload[4]`.
 
- 3. OPTIONALLY, perform this sub-step:
+ 3. If `alg` equals:
 
-     1. Using a vendor-specific store of trusted attestation CA certificates,
-        verify the signature of `attestation_cert`. If invalid or untrusted,
-        OPTIONALLY return CTAP2_ERR_XXX.
+    - 0:
 
- 4. Store `(S, aaguid)` internally.
+       1. Let `S = payload[-1]`.
 
- 5. Increment the `state` counter by one (the counter's initial value is 0).
+       2. Extract the public key from `attestation_cert` and use it to verify
+          the signature `sig` against the signed data `alg || aaguid || S`. If
+          invalid, return CTAP2_ERR_XXX.
 
+       3. OPTIONALLY, perform this sub-step:
+           1. Using a vendor-specific store of trusted attestation CA
+              certificates, verify the signature of `attestation_cert`. If
+              invalid or untrusted, OPTIONALLY return CTAP2_ERR_XXX.
+
+       4. Store `(alg, aaguid, S)` internally.
+
+    - anything else:
+
+       1. Return CTAP2_ERR_XXX.
+
+ 4. Increment the `state` counter by one (the counter's initial value is 0).
 
 
 ## RP operations
@@ -523,7 +571,9 @@ their account. In either case, the associated main credential SHOULD be revoked
 and no longer usable.
 
 
-[authdata]: https://w3c.github.io/webauthn/#authenticator-data
 [att-cred-data]: https://w3c.github.io/webauthn/#attested-credential-data
+[authdata]: https://w3c.github.io/webauthn/#authenticator-data
+[rfc3279]: https://tools.ietf.org/html/rfc3279.html
 [rp-auth-ext-processing]: https://w3c.github.io/webauthn/#sctn-verifying-assertion
 [rp-reg-ext-processing]: https://w3c.github.io/webauthn/#sctn-registering-a-new-credential
+[sec1]: http://www.secg.org/sec1-v2.pdf
