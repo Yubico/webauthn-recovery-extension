@@ -327,7 +327,9 @@ If `action` is
               is the byte array `X` without the first `n` bytes and `DROP_RIGHT(X, n)`
               is the byte array `X` without the last `n` bytes.
 
-           2. Let `E` be the P-256 public key decoded from the compressed point `E_enc`.
+           2. Let `E` be the P-256 public key decoded from the compressed point
+              `E_enc` as described in [SEC1][sec1], section 2.3.4. If invalid,
+              return CTAP2_ERR_XXX.
 
            3. Let `ikm = ECDH(s, E)`. Let `ikm_x` be the X coordinate of `ikm`,
               encoded as a byte string of length 32 as described in
@@ -503,18 +505,22 @@ CTAP2_ERR_XXX represents some not yet specified error code.
 
     - 0:
 
-       1. Let `S = payload[-1]`.
+       1. Let `S_enc = payload[-1]`.
 
-       2. Extract the public key from `attestation_cert` and use it to verify
-          the signature `sig` against the signed data `alg || aaguid || S`. If
-          invalid, return CTAP2_ERR_XXX.
+       2. Let `S` be the P-256 public key decoded from the compressed point
+          `S_enc` as described in [SEC1][sec1], section 2.3.4. If invalid,
+          return CTAP2_ERR_XXX.
 
-       3. OPTIONALLY, perform this sub-step:
+       3. Extract the public key from `attestation_cert` and use it to verify
+          the signature `sig` against the signed data `alg || aaguid || S_enc`.
+          If invalid, return CTAP2_ERR_XXX.
+
+       4. OPTIONALLY, perform this sub-step:
            1. Using a vendor-specific store of trusted attestation CA
               certificates, verify the signature of `attestation_cert`. If
               invalid or untrusted, OPTIONALLY return CTAP2_ERR_XXX.
 
-       4. Store `(alg, aaguid, S)` internally.
+       5. Store `(alg, aaguid, S)` internally.
 
     - anything else:
 
