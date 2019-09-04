@@ -266,7 +266,7 @@ If `action` is
 
              2. Let `ikm = ECDH(e, S)`. Let `ikm_x` be the X coordinate of `ikm`,
                 encoded as a byte string of length 32 as described in
-                [SEC1][sec1], section 2.3.7.
+                [SEC 1][sec1], section 2.3.7.
 
              3. Let `okm` be 64 bytes of output keying material from [HKDF][hkdf]
                 with the arguments:
@@ -339,12 +339,12 @@ If `action` is
                 is the byte array `X` without the last `n` bytes.
 
              2. Let `E` be the P-256 public key decoded from the compressed point
-                `E_enc` as described in [SEC1][sec1], section 2.3.4. If invalid,
+                `E_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
                 return CTAP2_ERR_XXX.
 
              3. Let `ikm = ECDH(s, E)`. Let `ikm_x` be the X coordinate of `ikm`,
                 encoded as a byte string of length 32 as described in
-                [SEC1][sec1], section 2.3.7.
+                [SEC 1][sec1], section 2.3.7.
 
              4. Let `okm` be 64 bytes of output keying material from [HKDF][hkdf]
                 with the arguments:
@@ -532,7 +532,7 @@ CTAP2_ERR_XXX represents some not yet specified error code.
        1. Let `S_enc = payload[-1]`. Verify that `S_enc` is a byte string.
 
        2. Let `S` be the P-256 public key decoded from the compressed point
-          `S_enc` as described in [SEC1][sec1], section 2.3.4. If invalid,
+          `S_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
           return CTAP2_ERR_XXX.
 
        3. Extract the public key from `attestation_cert` and use it to verify
