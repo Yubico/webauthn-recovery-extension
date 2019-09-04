@@ -250,9 +250,12 @@ If `action` is
 
 - `"generate"`,
 
-   1. Let `creds` be an empty list.
+   1. If the current operation is not an `authenticatorGetAssertion` operation,
+      return CTAP2_ERR_XXX.
 
-   2. For each algorithm ID, AAGUID and recovery seed tuple `(alg, aaguid, S)`
+   2. Let `creds` be an empty list.
+
+   3. For each algorithm ID, AAGUID and recovery seed tuple `(alg, aaguid, S)`
       stored in this authenticator:
 
        1. If `alg` equals
@@ -308,19 +311,22 @@ If `action` is
 
        3. Add `attCredData` to `creds`.
 
-   3. Let `state` be the current value of the _recovery credentials state
+   4. Let `state` be the current value of the _recovery credentials state
       counter_.
 
-   4. Set the extension output to the CBOR encoding of `{"action": "generate",
+   5. Set the extension output to the CBOR encoding of `{"action": "generate",
       "state": state, "creds": creds}`.
 
 
 - `"recover"`,
 
-   1. If the recovery seed key pair `s, S` has not been initialized, return
+   1. If the current operation is not an `authenticatorMakeCredential`
+      operation, return CTAP2_ERR_XXX.
+
+   2. If the recovery seed key pair `s, S` has not been initialized, return
       CTAP2_ERR_XXX.
 
-   2. For each `cred` in `allowCredentials`:
+   3. For each `cred` in `allowCredentials`:
 
        1. Let `alg = LEFT(cred.id, 1)`.
 
@@ -379,7 +385,7 @@ If `action` is
           "recover", "credId": cred.id, "sig": sig, "state": state}` and end
           extension processing.
 
-   3. Return an error code equivalent to ERR_XXX.
+   4. Return an error code equivalent to ERR_XXX.
 
 - anything else,
 
