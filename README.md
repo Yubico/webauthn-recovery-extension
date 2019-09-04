@@ -489,6 +489,18 @@ to 0.
 This command takes the following arguments:
 
 - `payload`: The output of _Export Recovery Seed_ from another authenticator.
+  This is a CBOR map containing at least the following keys:
+
+  | Key | Type | Name | Description
+  | --- | ---- | ---- | -----------
+  | 1 | Unsigned integer | `alg` | Identifier for the key agreement scheme
+  | 2 | Byte string | `attestation_cert` | DER encoded X.509 attestation certificate
+  | 3 | Byte string | `aaguid` | AAGUID of the authenticator that exported the `payload`
+  | 4 | Byte string | `sig` | DER encoded ECDSA signature
+
+  Depending on the value of `alg`, additional keys are required as detailed in
+  the following algorithm.
+
 
 CTAP2_ERR_XXX represents some not yet specified error code.
 
@@ -498,14 +510,11 @@ CTAP2_ERR_XXX represents some not yet specified error code.
  2. Verify that `payload` is encoded in [CTAP2 canonical CBOR encoding
     form][ctap2-canon]. If not, return CTAP2_ERR_XXX.
 
- 3. Let `alg = payload[1]`, `attestation_cert = payload[2]`, `aaguid =
-    payload[3]`, `sig = payload[4]`.
-
- 4. If `alg` equals:
+ 3. If `alg` equals:
 
     - 0:
 
-       1. Let `S_enc = payload[-1]`.
+       1. Let `S_enc = payload[-1]`. Verify that `S_enc` is a byte string.
 
        2. Let `S` be the P-256 public key decoded from the compressed point
           `S_enc` as described in [SEC1][sec1], section 2.3.4. If invalid,
@@ -526,7 +535,7 @@ CTAP2_ERR_XXX represents some not yet specified error code.
 
        1. Return CTAP2_ERR_XXX.
 
- 5. Increment the `state` counter by one (the counter's initial value is 0).
+ 4. Increment the `state` counter by one (the counter's initial value is 0).
 
 
 ## RP operations
