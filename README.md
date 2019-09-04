@@ -440,9 +440,9 @@ of account recovery.
 
 This command takes the following arguments:
 
-- `algs`: A CBOR array of unsigned 8-bit integers.
+- `allow_algs`: A CBOR array of unsigned 8-bit integers.
 
- 1. For each `alg` in `algs`:
+ 1. For each `alg` in `allow_algs`:
 
      1. If `alg` equals:
 
