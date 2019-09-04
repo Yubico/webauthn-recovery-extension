@@ -381,6 +381,10 @@ If `action` is
 
    3. Return an error code equivalent to ERR_XXX.
 
+- anything else,
+
+   1. Return CTAP2_ERR_XXX.
+
 
 ### Authenticator extension output
 
