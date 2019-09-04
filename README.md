@@ -315,7 +315,10 @@ If `action` is
 
 - `"recover"`,
 
- 1. For each `cred` in `allowCredentials`:
+ 1. If the recovery seed key pair `s, S` has not been initialized, return
+    CTAP2_ERR_XXX.
+
+ 2. For each `cred` in `allowCredentials`:
 
      1. Let `alg = LEFT(cred.id, 1)`.
 
@@ -374,7 +377,7 @@ If `action` is
         "recover", "credId": cred.id, "sig": sig, "state": state}` and end
         extension processing.
 
- 2. Return an error code equivalent to ERR_XXX.
+ 3. Return an error code equivalent to ERR_XXX.
 
 
 ### Authenticator extension output
