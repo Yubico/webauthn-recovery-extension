@@ -365,7 +365,7 @@ If `action` is
 
         - anything else:
 
-           1. Return CTAP2_ERR_XXX.
+           1. _Continue_.
 
      9. Let `state` be the current value of the _recovery credentials state
         counter_.
