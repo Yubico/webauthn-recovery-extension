@@ -416,14 +416,17 @@ This command takes the following arguments:
               P-256 key pair and store it as `s, S`. The `authenticatorReset`
               command MUST erase `s` and `S`.
 
-           2. Return the following output encoded as a CBOR map:
+           2. Let `S_enc` be `S` encoded as described in [SEC 1][sec1], section
+              2.3.3, using point compression.
+
+           3. Return the following output encoded as a CBOR map:
 
                   {
                     1: alg  # Identifier for the key agreement scheme
                     2: attestation_cert,  # DER encoded X509 certificate as a byte string.
                     3: aaguid,  # Device AAGUID as a byte string.
                     4: sign(attestation_key, aaguid || S)  # ECDSA signature as a byte string (S in COSE form).
-                    -1: S  # Public key from above, encoded as a COSE key.
+                    -1: S_enc  # Public key encoded as described above
                   }
 
         - anything else:
