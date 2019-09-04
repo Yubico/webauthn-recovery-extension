@@ -419,13 +419,18 @@ This command takes the following arguments:
            2. Let `S_enc` be `S` encoded as described in [SEC 1][sec1], section
               2.3.3, using point compression.
 
-           3. Return the following output encoded as a CBOR map:
+           3. Let `sig` be an ECDSA signature over the data `alg || aaguid ||
+              S_enc` using the authenticator's attestation key and the SHA-256
+              hash algorithm. `sig` is DER encoded as described in [RFC
+              3279][rfc3279].
+
+           4. Return the following output encoded as a CBOR map:
 
                   {
                     1: alg  # Identifier for the key agreement scheme
                     2: attestation_cert,  # DER encoded X509 certificate as a byte string.
                     3: aaguid,  # Device AAGUID as a byte string.
-                    4: sign(attestation_key, aaguid || S)  # ECDSA signature as a byte string (S in COSE form).
+                    4: sig  # ECDSA signature as described above
                     -1: S_enc  # Public key encoded as described above
                   }
 
