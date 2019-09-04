@@ -241,143 +241,145 @@ If `action` is
 
 - `"state"`,
 
- 1. Let `state` be the current value of the _recovery credentials state counter_.
+   1. Let `state` be the current value of the _recovery credentials state
+      counter_.
 
- 2. Set the extension output to the CBOR encoding of `{"action": "state",
-    "state": state}`.
+   2. Set the extension output to the CBOR encoding of `{"action": "state",
+      "state": state}`.
 
 
 - `"generate"`,
 
- 1. Let `creds` be an empty list.
+   1. Let `creds` be an empty list.
 
- 2. For each algorithm ID, AAGUID and recovery seed tuple `(alg, aaguid, S)`
-    stored in this authenticator:
+   2. For each algorithm ID, AAGUID and recovery seed tuple `(alg, aaguid, S)`
+      stored in this authenticator:
 
-     1. If `alg` equals
+       1. If `alg` equals
 
-        - 0:
+          - 0:
 
-           1. Generate an ephemeral EC P-256 key pair: `e, E`.
+             1. Generate an ephemeral EC P-256 key pair: `e, E`.
 
-           2. Let `ikm = ECDH(e, S)`. Let `ikm_x` be the X coordinate of `ikm`,
-              encoded as a byte string of length 32 as described in
-              [SEC1][sec1], section 2.3.7.
+             2. Let `ikm = ECDH(e, S)`. Let `ikm_x` be the X coordinate of `ikm`,
+                encoded as a byte string of length 32 as described in
+                [SEC1][sec1], section 2.3.7.
 
-           3. Let `okm` be 64 bytes of output keying material from [HKDF][hkdf]
-              with the arguments:
+             3. Let `okm` be 64 bytes of output keying material from [HKDF][hkdf]
+                with the arguments:
 
-              - `salt`: Not set.
-              - `IKM`: `ikm_x`.
-              - `info`: Not set.
-              - `L`: 64.
+                - `salt`: Not set.
+                - `IKM`: `ikm_x`.
+                - `info`: Not set.
+                - `L`: 64.
 
-              Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
-              32), 32)`.
+                Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
+                32), 32)`.
 
-           4. If `credKey >= n`, where `n` is the order of the P-256 curve,
-              start over from 1.
+             4. If `credKey >= n`, where `n` is the order of the P-256 curve,
+                start over from 1.
 
-           5. Let `P = (credKey * G) + S`, where * and + are EC point
-              multiplication and addition, and `G` is the generator of the P-256
-              curve.
+             5. Let `P = (credKey * G) + S`, where * and + are EC point
+                multiplication and addition, and `G` is the generator of the P-256
+                curve.
 
-           6. If `P` is the point at infinity, start over from 1.
+             6. If `P` is the point at infinity, start over from 1.
 
-           7. Let `rpIdHash` be the SHA-256 hash of `rpId`.
+             7. Let `rpIdHash` be the SHA-256 hash of `rpId`.
 
-           8. Let `S_enc` be `E` encoded as described in [SEC 1][sec1], section
-              2.3.3, using point compression.
+             8. Let `S_enc` be `E` encoded as described in [SEC 1][sec1], section
+                2.3.3, using point compression.
 
-           9. Set `credentialId = alg || E_enc || LEFT(HMAC(macKey, alg || E_enc ||
-              rpIdHash), 16)`, where `LEFT(X, n)` is the first `n` bytes of the byte
-              array `X`.
+             9. Set `credentialId = alg || E_enc || LEFT(HMAC(macKey, alg || E_enc ||
+                rpIdHash), 16)`, where `LEFT(X, n)` is the first `n` bytes of the byte
+                array `X`.
 
-        - anything else:
+          - anything else:
 
-           1. Return CTAP2_ERR_XXX.
+             1. Return CTAP2_ERR_XXX.
 
-     7. Let `attCredData` be a new [attested credential data][att-cred-data]
-        structure with the following member values:
+       2. Let `attCredData` be a new [attested credential data][att-cred-data]
+          structure with the following member values:
 
-        - **aaguid**: `aaguid`.
-        - **credentialIdLength**: The byte length of `credentialId`.
-        - **credentialId**: `credentialId`.
-        - **credentialPublicKey**: `P`.
+          - **aaguid**: `aaguid`.
+          - **credentialIdLength**: The byte length of `credentialId`.
+          - **credentialId**: `credentialId`.
+          - **credentialPublicKey**: `P`.
 
-     8. Add `attCredData` to `creds`.
+       3. Add `attCredData` to `creds`.
 
- 3. Let `state` be the current value of the _recovery credentials state counter_.
+   3. Let `state` be the current value of the _recovery credentials state
+      counter_.
 
- 4. Set the extension output to the CBOR encoding of `{"action": "generate",
-    "state": state, "creds": creds}`.
+   4. Set the extension output to the CBOR encoding of `{"action": "generate",
+      "state": state, "creds": creds}`.
 
 
 - `"recover"`,
 
- 1. If the recovery seed key pair `s, S` has not been initialized, return
-    CTAP2_ERR_XXX.
+   1. If the recovery seed key pair `s, S` has not been initialized, return
+      CTAP2_ERR_XXX.
 
- 2. For each `cred` in `allowCredentials`:
+   2. For each `cred` in `allowCredentials`:
 
-     1. Let `alg = LEFT(cred.id, 1)`.
+       1. Let `alg = LEFT(cred.id, 1)`.
 
-     2. If `alg` equals
+       2. If `alg` equals
 
-        - 0:
+          - 0:
 
-           1. Let `E_enc = DROP_LEFT(DROP_RIGHT(cred.id, 16), 1)`, where `DROP_LEFT(X, n)`
-              is the byte array `X` without the first `n` bytes and `DROP_RIGHT(X, n)`
-              is the byte array `X` without the last `n` bytes.
+             1. Let `E_enc = DROP_LEFT(DROP_RIGHT(cred.id, 16), 1)`, where `DROP_LEFT(X, n)`
+                is the byte array `X` without the first `n` bytes and `DROP_RIGHT(X, n)`
+                is the byte array `X` without the last `n` bytes.
 
-           2. Let `E` be the P-256 public key decoded from the compressed point
-              `E_enc` as described in [SEC1][sec1], section 2.3.4. If invalid,
-              return CTAP2_ERR_XXX.
+             2. Let `E` be the P-256 public key decoded from the compressed point
+                `E_enc` as described in [SEC1][sec1], section 2.3.4. If invalid,
+                return CTAP2_ERR_XXX.
 
-           3. Let `ikm = ECDH(s, E)`. Let `ikm_x` be the X coordinate of `ikm`,
-              encoded as a byte string of length 32 as described in
-              [SEC1][sec1], section 2.3.7.
+             3. Let `ikm = ECDH(s, E)`. Let `ikm_x` be the X coordinate of `ikm`,
+                encoded as a byte string of length 32 as described in
+                [SEC1][sec1], section 2.3.7.
 
-           4. Let `okm` be 64 bytes of output keying material from [HKDF][hkdf]
-              with the arguments:
+             4. Let `okm` be 64 bytes of output keying material from [HKDF][hkdf]
+                with the arguments:
 
-              - `salt`: Not set.
-              - `IKM`: `ikm_x`.
-              - `info`: Not set.
-              - `L`: 64.
+                - `salt`: Not set.
+                - `IKM`: `ikm_x`.
+                - `info`: Not set.
+                - `L`: 64.
 
-              Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
-              32), 32)`.
+                Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
+                32), 32)`.
 
-           5. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
+             5. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
 
-           6. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
-              || E || rpIdHash), 16)`, _continue_.
+             6. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
+                || E || rpIdHash), 16)`, _continue_.
 
-           7. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
-              curve.
+             7. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
+                curve.
 
-           8. Let `authenticatorDataWithoutExtensions` be the [authenticator
-              data][authdata] that will be returned from this registration operation,
-              but without the `extensions` part. The `ED` flag in
-              `authenticatorDataWithoutExtensions` MUST be set to 1 even though
-              `authenticatorDataWithoutExtensions` does not include extension data.
+             8. Let `authenticatorDataWithoutExtensions` be the [authenticator
+                data][authdata] that will be returned from this registration operation,
+                but without the `extensions` part. The `ED` flag in
+                `authenticatorDataWithoutExtensions` MUST be set to 1 even though
+                `authenticatorDataWithoutExtensions` does not include extension data.
 
-           9. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
-              clientDataHash` using `p`.
+             9. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
+                clientDataHash` using `p`.
 
-        - anything else:
+          - anything else:
 
-           1. _Continue_.
+             1. _Continue_.
 
-     9. Let `state` be the current value of the _recovery credentials state
-        counter_.
+       9. Let `state` be the current value of the _recovery credentials state
+          counter_.
 
-    10. Set the extension output to the CBOR encoding of `{"action":
-        "recover", "credId": cred.id, "sig": sig, "state": state}` and end
-        extension processing.
+      10. Set the extension output to the CBOR encoding of `{"action":
+          "recover", "credId": cred.id, "sig": sig, "state": state}` and end
+          extension processing.
 
- 3. Return an error code equivalent to ERR_XXX.
+   3. Return an error code equivalent to ERR_XXX.
 
 
 ### Authenticator extension output
