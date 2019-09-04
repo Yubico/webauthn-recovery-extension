@@ -272,8 +272,10 @@ If `action` is
 
            5. If `P` is the point at infinity, start over from 1.
 
-           6. Set `credentialId = alg || E || LEFT(HMAC(macKey, alg || E ||
-              rp.id), 16)`, where `LEFT(X, n)` is the first `n` bytes of the byte
+           6. Let `rpIdHash` be the SHA-256 hash of `rpId`.
+
+           7. Set `credentialId = alg || E || LEFT(HMAC(macKey, alg || E ||
+              rpIdHash), 16)`, where `LEFT(X, n)` is the first `n` bytes of the byte
               array `X`.
 
         - anything else:
@@ -312,19 +314,21 @@ If `action` is
 
            2. Use `HKDF(ECDH(s, E))` to derive `credKey`, `macKey`.
 
-           3. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
-              || E || rp.id))`, _continue_.
+           3. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
 
-           4. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
+           4. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
+              || E || rpIdHash))`, _continue_.
+
+           5. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
               curve.
 
-           5. Let `authenticatorDataWithoutExtensions` be the [authenticator
+           6. Let `authenticatorDataWithoutExtensions` be the [authenticator
               data][authdata] that will be returned from this registration operation,
               but without the `extensions` part. The `ED` flag in
               `authenticatorDataWithoutExtensions` MUST be set to 1 even though
               `authenticatorDataWithoutExtensions` does not include extension data.
 
-           6. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
+           7. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
               clientDataHash` using `p`.
 
         - anything else:
