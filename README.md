@@ -424,7 +424,8 @@ This command takes the following arguments:
               hash algorithm. `sig` is DER encoded as described in [RFC
               3279][rfc3279].
 
-           4. Return the following output encoded as a CBOR map:
+           4. Return the following output encoded as a CBOR map in [CTAP2
+              canonical CBOR encoding form][ctap2-canon]:
 
                   {
                     1: alg  # Identifier for the key agreement scheme
@@ -458,10 +459,13 @@ CTAP2_ERR_XXX represents some not yet specified error code.
  1. If the authenticator has no storage space available to import a recovery
     seed, return CTAP2_ERR_XXX.
 
- 2. Let `alg = payload[1]`, `attestation_cert = payload[2]`, `aaguid =
+ 2. Verify that `payload` is encoded in [CTAP2 canonical CBOR encoding
+    form][ctap2-canon]. If not, return CTAP2_ERR_XXX.
+
+ 3. Let `alg = payload[1]`, `attestation_cert = payload[2]`, `aaguid =
     payload[3]`, `sig = payload[4]`.
 
- 3. If `alg` equals:
+ 4. If `alg` equals:
 
     - 0:
 
@@ -482,7 +486,7 @@ CTAP2_ERR_XXX represents some not yet specified error code.
 
        1. Return CTAP2_ERR_XXX.
 
- 4. Increment the `state` counter by one (the counter's initial value is 0).
+ 5. Increment the `state` counter by one (the counter's initial value is 0).
 
 
 ## RP operations
@@ -581,6 +585,7 @@ and no longer usable.
 
 [att-cred-data]: https://w3c.github.io/webauthn/#attested-credential-data
 [authdata]: https://w3c.github.io/webauthn/#authenticator-data
+[ctap2-canon]: https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#ctap2-canonical-cbor-encoding-form
 [rfc3279]: https://tools.ietf.org/html/rfc3279.html
 [rp-auth-ext-processing]: https://w3c.github.io/webauthn/#sctn-verifying-assertion
 [rp-reg-ext-processing]: https://w3c.github.io/webauthn/#sctn-registering-a-new-credential
