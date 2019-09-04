@@ -274,7 +274,10 @@ If `action` is
 
            6. Let `rpIdHash` be the SHA-256 hash of `rpId`.
 
-           7. Set `credentialId = alg || E || LEFT(HMAC(macKey, alg || E ||
+           7. Let `S_enc` be `E` encoded as described in [SEC 1][sec1], section
+              2.3.3, using point compression.
+
+           8. Set `credentialId = alg || E_enc || LEFT(HMAC(macKey, alg || E_enc ||
               rpIdHash), 16)`, where `LEFT(X, n)` is the first `n` bytes of the byte
               array `X`.
 
@@ -308,27 +311,29 @@ If `action` is
 
         - 0:
 
-           1. Let `E = DROP_LEFT(DROP_RIGHT(cred.id, 16), 1)`, where `DROP_LEFT(X, n)`
+           1. Let `E_enc = DROP_LEFT(DROP_RIGHT(cred.id, 16), 1)`, where `DROP_LEFT(X, n)`
               is the byte array `X` without the first `n` bytes and `DROP_RIGHT(X, n)`
               is the byte array `X` without the last `n` bytes.
 
-           2. Use `HKDF(ECDH(s, E))` to derive `credKey`, `macKey`.
+           2. Let `E` be the P-256 public key decoded from the compressed point `E_enc`.
 
-           3. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
+           3. Use `HKDF(ECDH(s, E))` to derive `credKey`, `macKey`.
 
-           4. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
+           4. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
+
+           5. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
               || E || rpIdHash), 16)`, _continue_.
 
-           5. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
+           6. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
               curve.
 
-           6. Let `authenticatorDataWithoutExtensions` be the [authenticator
+           7. Let `authenticatorDataWithoutExtensions` be the [authenticator
               data][authdata] that will be returned from this registration operation,
               but without the `extensions` part. The `ED` flag in
               `authenticatorDataWithoutExtensions` MUST be set to 1 even though
               `authenticatorDataWithoutExtensions` does not include extension data.
 
-           7. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
+           8. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
               clientDataHash` using `p`.
 
         - anything else:
