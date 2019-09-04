@@ -317,7 +317,7 @@ If `action` is
            3. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
 
            4. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
-              || E || rpIdHash))`, _continue_.
+              || E || rpIdHash), 16)`, _continue_.
 
            5. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
               curve.
