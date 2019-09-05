@@ -178,6 +178,17 @@ NOTE: The choice to make registration of recovery credentials explicit is
 deliberate, in an attempt to ensure that the user deliberately intends to do so
 and understands the implications.
 
+The authenticator operations are governed by an `alg` parameter,
+an unsigned 8-bit integer identifying the key agreement scheme to be used.
+Credential IDs for recovery credentials are always on the form
+`alg || <key agreement data>`,
+where the format and meaning of `<key agreement data>`
+depends on the value of `alg`.
+This allows for new key agreement schemes to be added in the future
+without changes to the WebAuthn-facing interface;
+clients and RPs are automatically compatible with any new key agreement schemes.
+Currently the only valid value for `alg` is `alg=0`.
+
 
 ### Extension identifier
 
