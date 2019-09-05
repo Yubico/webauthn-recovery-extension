@@ -255,7 +255,7 @@ If `action` is
 
    2. Let `creds` be an empty list.
 
-   3. For each algorithm ID, AAGUID and recovery seed tuple `(alg, aaguid, S)`
+   3. For each recovery seed tuple `(alg, aaguid, S)`
       stored in this authenticator:
 
        1. If `alg` equals
