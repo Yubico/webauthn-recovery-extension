@@ -594,11 +594,10 @@ procedure:
  3. In step 15 of the RP Operation to [Verify an Authentication
     Assertion][rp-auth-ext-processing], perform the following steps:
 
-     1. Let `extOutputs = pkc.response.authenticatorData.extensions`.
+     1. Let `extOutput = pkc.response.authenticatorData.extensions["recovery"]`.
 
-     2. Store `(extOutputs["recovery"].state, extOutputs["recovery"].creds)`
-        associated with `pkc.id`. If such a pair is already stored associated
-        with `pkc.id`, overwrite it.
+     2. Store `(extOutput.state, extOutput.creds)` associated with `pkc.id`.
+     If such a pair is already stored associated with `pkc.id`, overwrite it.
 
  4. Continue with the remaining steps of the standard authentication ceremony.
 
@@ -628,10 +627,10 @@ credential, the RP performs the following procedure:
  5. In step 14 of the RP Operation to [Register a New
     Credential][rp-reg-ext-processing], perform the following steps:
 
-     1. Let `extOutputs = pkc.response.authenticatorData.extensions`.
+     1. Let `extOutput = pkc.response.authenticatorData.extensions["recovery"']`.
 
      2. Let `publicKey` be the stored public key for the recovery credential
-        identified by the credential ID `extOutputs["recovery"].credId`.
+        identified by the credential ID `extOutput.credId`.
 
      3. Let `authenticatorDataWithoutExtensions` be
         `pkc.response.authenticatorData`, but without the `extensions` part. The
@@ -639,7 +638,7 @@ credential, the RP performs the following procedure:
         though `authenticatorDataWithoutExtensions` does not include the
         extension outputs.
 
-     6. Using `publicKey`, verify that `extOutputs["recovery"].sig` is a valid
+     6. Using `publicKey`, verify that `extOutput.sig` is a valid
         signature over `authenticatorDataWithoutExtensions || clientDataHash`.
         If the signature is invalid, fail the registration ceremony.
 
@@ -651,7 +650,7 @@ credential, the RP performs the following procedure:
     and the registration of the new credential SHOULD be performed as an atomic
     operation.
 
- 9. If `extOutputs["recovery"].state` is greater than 0, the RP SHOULD initiate
+ 9. If `extOutput.state` is greater than 0, the RP SHOULD initiate
     recovery credential registration (`action = "generate"`) for the newly
     registered credential.
 
