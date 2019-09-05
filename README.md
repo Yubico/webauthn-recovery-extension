@@ -301,6 +301,10 @@ If `action` is
 
              1. Return CTAP2_ERR_XXX.
 
+                Note: This should never happen, since the _Import recovery seed_
+                operation should never store a recovery seed with an unknown
+                `alg` value.
+
        2. Let `attCredData` be a new [attested credential data][att-cred-data]
           structure with the following member values:
 
