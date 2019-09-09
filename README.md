@@ -523,10 +523,10 @@ This command takes the following arguments:
 
   | Key | Type | Name | Description
   | --- | ---- | ---- | -----------
-  | 1 | Unsigned integer | `alg` | Identifier for the key agreement scheme
-  | 2 | Byte string | `attestation_cert` | DER encoded X.509 attestation certificate
-  | 3 | Byte string | `aaguid` | AAGUID of the authenticator that exported the `payload`
-  | 4 | Byte string | `sig` | DER encoded ECDSA signature
+  | 1 | Unsigned integer | `alg` | Identifier for the key agreement scheme.
+  | 2 | Byte string | `attestation_cert` | DER encoded X.509 attestation certificate.
+  | 3 | Byte string | `aaguid` | AAGUID of the authenticator that exported the `payload`.
+  | 4 | Byte string | `sig` | DER encoded ECDSA signature.
 
   Depending on the value of `alg`, additional keys are required as detailed in
   the following algorithm.
@@ -544,22 +544,26 @@ CTAP2_ERR_XXX represents some not yet specified error code.
 
     - 0:
 
-       1. Let `S_enc = payload[-1]`. Verify that `S_enc` is a byte string.
+      The following additional keys are required in `payload`:
 
-       2. Let `S` be the P-256 public key decoded from the compressed point
+      | Key | Type | Name | Description
+      | --- | ---- | ---- | -----------
+      | -1 | Byte string | `S_enc` | P-256 public key encoded as described in [SEC 1][sec1], section 2.3.4, using point compression.
+
+       1. Let `S` be the P-256 public key decoded from the compressed point
           `S_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
           return CTAP2_ERR_XXX.
 
-       3. Extract the public key from `attestation_cert` and use it to verify
+       2. Extract the public key from `attestation_cert` and use it to verify
           the signature `sig` against the signed data `alg || aaguid || S_enc`.
           If invalid, return CTAP2_ERR_XXX.
 
-       4. OPTIONALLY, perform this sub-step:
+       3. OPTIONALLY, perform this sub-step:
            1. Using a vendor-specific store of trusted attestation CA
               certificates, verify the signature of `attestation_cert`. If
               invalid or untrusted, OPTIONALLY return CTAP2_ERR_XXX.
 
-       5. Store `(alg, aaguid, S)` internally.
+       4. Store `(alg, aaguid, S)` internally.
 
     - anything else:
 
