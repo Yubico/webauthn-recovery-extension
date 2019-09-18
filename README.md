@@ -468,6 +468,9 @@ This command takes the following arguments:
 
 - `allow_algs`: A CBOR array of unsigned 8-bit integers.
 
+ 1. Perform user verification and a test of user presence. If either fails,
+    return CTAP2_ERR_XXX.
+
  1. For each `alg` in `allow_algs`:
 
      1. If `alg` equals:
@@ -529,6 +532,9 @@ This command takes the following arguments:
 
 
 CTAP2_ERR_XXX represents some not yet specified error code.
+
+ 1. Perform user verification and a test of user presence. If either fails,
+    return CTAP2_ERR_XXX.
 
  1. If the authenticator has no storage space available to import a recovery
     seed, return CTAP2_ERR_XXX.
