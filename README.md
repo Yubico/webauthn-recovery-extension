@@ -39,6 +39,16 @@ secure location, while maintaining WebAuthn's privacy protection of
 non-correlatable public keys.
 
 
+# Terminology
+
+The following byte array manipulation functions are used throughout this
+document:
+
+- `LEFT(X, n)` is the first `n` bytes of the byte array `X`.
+- `DROP_LEFT(X, n)` is the byte array `X` without the first `n` bytes.
+- `DROP_RIGHT(X, n)` is the byte array `X` without the last `n` bytes.
+
+
 # The key agreement scheme
 
 The scheme has three participants:
@@ -113,8 +123,7 @@ The following steps are performed by Mary.
 
  5. If `P` is the point at infinity, start over from 1.
 
- 6. Let `credential_id = E || LEFT(HMAC(mac_key, E || rp_id), 16)`,
-    where `LEFT(X, n)` is the first `n` bytes of the byte array `X`.
+ 6. Let `credential_id = E || LEFT(HMAC(mac_key, E || rp_id), 16)`.
 
  7. Send the pair `(P, credential_id)` to Robin for storage.
 
@@ -126,8 +135,7 @@ The following steps are performed by Bob.
  1. Retrieve a set of `credential_id`s from Robin. Perform the following steps
     for each `credential_id`.
 
- 2. Let `E = DROP_RIGHT(credential_id, 16)`, where `DROP_RIGHT(X, n)` is the
-    byte array `X` without the last `n` bytes.
+ 2. Let `E = DROP_RIGHT(credential_id, 16)`.
 
  3. Use `HKDF(ECDH(s, E))` to derive `cred_key`, `mac_key`.
 
@@ -323,8 +331,7 @@ If `action` is
                 2.3.3, using point compression.
 
              9. Set `credentialId = alg || E_enc || LEFT(HMAC(macKey, alg || E_enc ||
-                rpIdHash), 16)`, where `LEFT(X, n)` is the first `n` bytes of the byte
-                array `X`.
+                rpIdHash), 16)`.
 
           - anything else:
 
@@ -367,9 +374,7 @@ If `action` is
 
           - 0:
 
-             1. Let `E_enc = DROP_LEFT(DROP_RIGHT(cred.id, 16), 1)`, where `DROP_LEFT(X, n)`
-                is the byte array `X` without the first `n` bytes and `DROP_RIGHT(X, n)`
-                is the byte array `X` without the last `n` bytes.
+             1. Let `E_enc = DROP_LEFT(DROP_RIGHT(cred.id, 16), 1)`.
 
              2. Let `E` be the P-256 public key decoded from the compressed point
                 `E_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
