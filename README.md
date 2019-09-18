@@ -632,7 +632,7 @@ procedure:
      1. Let `extOutput = pkc.response.authenticatorData.extensions["recovery"]`.
 
      2. Store `(extOutput.state, extOutput.creds)` associated with `pkc.id`.
-     If such a pair is already stored associated with `pkc.id`, overwrite it.
+        If such a pair is already stored associated with `pkc.id`, overwrite it.
 
  4. Continue with the remaining steps of the standard authentication ceremony.
 
