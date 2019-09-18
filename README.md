@@ -164,6 +164,26 @@ with the main authenticator, after which the latter can provide additional
 credentials for account recovery to the RP without involving the backup
 authenticators.
 
+In summary, the extension works like this:
+
+ 1. The main authenticator first generates public keys and credential IDs for
+    recovery credentials. These are stored by the RP and associated with the
+    main authenticator's credential, the _main credential_. These are delivered
+    through the authenticator data, and therefore signed by the main credential.
+
+ 1. After losing the main authenticator, account recovery can be done by
+    creating a new credential with the backup authenticator. The backup
+    authenticator receives the recovery credential IDs from the RP, and can use
+    one of them to derive the private key corresponding to the recovery public
+    key. The backup authenticator uses this private key to sign the new
+    credential, thus creating a signature chain from the main credential to the
+    new credential.
+
+ 1. Upon verifying the recovery signature, the RP invalidates the main
+    credential and all recovery credentials associated with it, and replaces it
+    with the new credential. The backup authenticator is thus "promoted" and
+    replaces the main authenticator.
+
 The main authenticator keeps a _recovery credentials state counter_ defined as
 follows. Let `state` be initialized to 0. Performing a device reset resets
 `state` to 0. When the set of registered backup authenticators for the device
