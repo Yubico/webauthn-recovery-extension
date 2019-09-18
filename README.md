@@ -614,6 +614,10 @@ credential registration (`action: "generate"`), which are:
 - Upon successful `get()`, if `state` > `old_state`, where `old_state` is the
   previous value for `state` that the RP has seen for the used credential.
 
+The following operations assume that each user account contains a
+`recoveryStates` field, which is a map with credential IDs as keys.
+`recoveryStates` is initialized to an empty map.
+
 
 ### Registering recovery credentials
 
@@ -631,8 +635,7 @@ procedure:
 
      1. Let `extOutput = pkc.response.authenticatorData.extensions["recovery"]`.
 
-     2. Store `(extOutput.state, extOutput.creds)` associated with `pkc.id`.
-        If such a pair is already stored associated with `pkc.id`, overwrite it.
+     1. Set `recoveryStates[pkc.id] = (extOutput.state, extOutput.creds)`.
 
  4. Continue with the remaining steps of the standard authentication ceremony.
 
@@ -642,50 +645,77 @@ procedure:
 To authenticate the user with a recovery credential and create a new main
 credential, the RP performs the following procedure:
 
- 1. Ask the user which credential to recover. Let `mainCred` be the chosen
-    credential.
+ 1. Let `allowCredentials` be a new empty list.
 
- 2. Let `allowCredentials` be a list of the credential descriptors of the
-    recovery credentials associated with `mainCred`. If `allowCredentials` is
-    empty, abort this procedure with an error.
+ 1. For each `(state, creds)` value in the `recoveryStates` map stored in the
+    user's account:
 
- 3. Initiate a `create()` operation with the extension input:
+     1. For each `cred` in `creds`:
+
+         1. Let `credDesc` be a PublicKeyCredentialDescriptor structure with the
+            following member values:
+
+            - **type**: `"public-key"`.
+            - **id**: `cred.credentialId`.
+
+         1. Add `credDesc` to `allowCredentials`.
+
+ 1. If `allowCredentials` is empty, abort this procedure with an error.
+
+ 1. Initiate a `create()` operation with the extension input:
 
         "recovery": {
           "action": "recover",
           "allowCredentials": <allowCredentials as computed above>
         }
 
- 4. Let `pkc` be the PublicKeyCredential response from the client. If the
+ 1. Let `pkc` be the PublicKeyCredential response from the client. If the
     operation fails, abort the ceremony with an error.
 
- 5. In step 14 of the RP Operation to [Register a New
+ 1. In step 14 of the RP Operation to [Register a New
     Credential][rp-reg-ext-processing], perform the following steps:
 
      1. Let `extOutput = pkc.response.authenticatorData.extensions["recovery"']`.
 
-     2. Let `publicKey` be the stored public key for the recovery credential
-        identified by the credential ID `extOutput.credId`.
+     1. Let `revokedCredId` be null.
 
-     3. Let `authenticatorDataWithoutExtensions` be
-        `pkc.response.authenticatorData`, but without the `extensions` part. The
-        `ED` flag in `authenticatorDataWithoutExtensions` MUST be set to 1 even
-        though `authenticatorDataWithoutExtensions` does not include the
-        extension outputs.
+     1. For each `mainCredId` in the keys of `recoveryStates`:
 
-     6. Using `publicKey`, verify that `extOutput.sig` is a valid
-        signature over `authenticatorDataWithoutExtensions || clientDataHash`.
-        If the signature is invalid, fail the registration ceremony.
+         1. Let `(state, creds) = recoveryCreds[mainCredId]`.
 
- 7. Continue with the remaining steps of the standard registration ceremony.
+         1. For each `cred` in `creds`:
+
+             1. If `cred.credentialId` equals `extOutput.credId`:
+
+                 1. Let `publicKey` be the decoded public key `cred.credentialPublicKey`.
+
+                 1. Let `authenticatorDataWithoutExtensions` be
+                    `pkc.response.authenticatorData`, but without the `extensions` part. The
+                    `ED` flag in `authenticatorDataWithoutExtensions` MUST be set to 1 even
+                    though `authenticatorDataWithoutExtensions` does not include the
+                    extension outputs.
+
+                 1. Using `publicKey`, verify that `extOutput.sig` is a valid
+                    signature over `authenticatorDataWithoutExtensions || clientDataHash`.
+                    If the signature is invalid, fail the registration ceremony.
+
+                 1. Set `revokedCredId = mainCredId`.
+
+                 1. _Break._
+
+             1. Else, _continue_.
+
+     1. If `revokedCredId` is null, abort the ceremony with an error.
+
+ 1. Continue with the remaining steps of the standard registration ceremony.
     This means a new credential has now been registered using the backup
     authenticator.
 
- 8. Revoke `mainCred` and all recovery credentials associated with it. This step
-    and the registration of the new credential SHOULD be performed as an atomic
-    operation.
+ 1. Invalidate the credential identified by `revokedCredId` and all recovery
+    credentials associated with it. This step and the registration of the new
+    credential SHOULD be performed as an atomic operation.
 
- 9. If `extOutput.state` is greater than 0, the RP SHOULD initiate
+ 1. If `extOutput.state` is greater than 0, the RP SHOULD initiate
     recovery credential registration (`action = "generate"`) for the newly
     registered credential.
 
