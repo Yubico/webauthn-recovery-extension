@@ -184,15 +184,13 @@ In summary, the extension works like this:
     with the new credential. The backup authenticator is thus "promoted" and
     replaces the main authenticator.
 
-The main authenticator keeps a _recovery credentials state counter_ defined as
-follows. Let `state` be initialized to 0. Performing a device reset resets
-`state` to 0. When the set of registered backup authenticators for the device
-changes (e.g., on adding or removing a backup authenticator, including adding
-the first backup authenticator) `state` is incremented by one.
-
-The `state` counter is stored by the main authenticator, and allows the RP to
-automatically detect when the set of registered recovery credentials needs to be
-updated.
+In order for the RP do detect when recovery credentials can be registered, or
+need to be updated, the main authenticator keeps a _recovery credentials state
+counter_ defined as follows. Let `state` be initialized to 0. Performing a
+device reset resets `state` to 0. When the set of registered backup
+authenticators for the device changes (e.g., on adding or removing a backup
+authenticator, including adding the first backup authenticator) `state` is
+incremented by one.
 
 NOTE: The choice to make registration of recovery credentials explicit is
 deliberate, in an attempt to ensure that the user deliberately intends to do so
