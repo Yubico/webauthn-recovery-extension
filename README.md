@@ -621,7 +621,7 @@ To register new backup credentials for a given main credential, or replace the
 existing backup credentials with updated ones, the RP performs the following
 procedure:
 
- 1. Initiate an `get()` operation and set the extension `"recovery": {"action": "generate"}`.
+ 1. Initiate a `get()` operation and set the extension `"recovery": {"action": "generate"}`.
 
  2. Let `pkc` be the PublicKeyCredential response from the client. If the
     operation fails, abort the ceremony with an error.
