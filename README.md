@@ -539,10 +539,10 @@ CTAP2_ERR_XXX represents some not yet specified error code.
  1. If the authenticator has no storage space available to import a recovery
     seed, return CTAP2_ERR_XXX.
 
- 2. Verify that `payload` is encoded in [CTAP2 canonical CBOR encoding
+ 1. Verify that `payload` is encoded in [CTAP2 canonical CBOR encoding
     form][ctap2-canon]. If not, return CTAP2_ERR_XXX.
 
- 3. If `alg` equals:
+ 1. If `alg` equals:
 
     - 0:
 
@@ -556,22 +556,26 @@ CTAP2_ERR_XXX represents some not yet specified error code.
           `S_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
           return CTAP2_ERR_XXX.
 
-       2. Extract the public key from `attestation_cert` and use it to verify
+       1. Extract the public key from `attestation_cert` and use it to verify
           the signature `sig` against the signed data `alg || aaguid || S_enc`.
           If invalid, return CTAP2_ERR_XXX.
 
-       3. OPTIONALLY, perform this sub-step:
+       1. If `attestation_cert` contains an extension with OID
+          1.3.6.1.4.1.45724.1.1.4 (`id-fido-gen-ce-aaguid`), verify that the
+          value of this extension equals `aaguid`.
+
+       1. OPTIONALLY, perform this sub-step:
            1. Using a vendor-specific store of trusted attestation CA
               certificates, verify the signature of `attestation_cert`. If
               invalid or untrusted, OPTIONALLY return CTAP2_ERR_XXX.
 
-       4. Store `(alg, aaguid, S)` internally.
+       1. Store `(alg, aaguid, S)` internally.
 
     - anything else:
 
        1. Return CTAP2_ERR_XXX.
 
- 4. Increment the `state` counter by one (the counter's initial value is 0).
+ 1. Increment the `state` counter by one (the counter's initial value is 0).
 
 
 ## RP operations
