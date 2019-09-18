@@ -495,7 +495,7 @@ This command takes the following arguments:
                   {
                     1: alg  # Identifier for the key agreement scheme
                     2: aaguid,  # Device AAGUID as a byte string.
-                    3: attestation_cert,  # DER encoded X509 certificate as a byte string.
+                    3: x5c,  # Sequence of byte strings containing DER encoded X509 certificates
                     4: sig  # ECDSA signature as described above
                     -1: S_enc  # Public key encoded as described above
                   }
@@ -524,7 +524,7 @@ This command takes the following arguments:
   | --- | ---- | ---- | -----------
   | 1 | Unsigned integer | `alg` | Identifier for the key agreement scheme.
   | 2 | Byte string | `aaguid` | AAGUID of the authenticator that exported the `payload`.
-  | 3 | Byte string | `attestation_cert` | DER encoded X.509 attestation certificate.
+  | 3 | Array of byte strings | `x5c` | Sequence of DER encoded X.509 attestation certificates
   | 4 | Byte string | `sig` | DER encoded ECDSA signature.
 
   Depending on the value of `alg`, additional keys are required as detailed in
@@ -556,6 +556,8 @@ CTAP2_ERR_XXX represents some not yet specified error code.
           `S_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
           return CTAP2_ERR_XXX.
 
+       1. Let `attestation_cert` be the first element of `x5c`.
+
        1. Extract the public key from `attestation_cert` and use it to verify
           the signature `sig` against the signed data `alg || aaguid || S_enc`.
           If invalid, return CTAP2_ERR_XXX.
@@ -566,8 +568,8 @@ CTAP2_ERR_XXX represents some not yet specified error code.
 
        1. OPTIONALLY, perform this sub-step:
            1. Using a vendor-specific store of trusted attestation CA
-              certificates, verify the signature of `attestation_cert`. If
-              invalid or untrusted, OPTIONALLY return CTAP2_ERR_XXX.
+              certificates, verify the signature chain `x5c`.
+              If invalid or untrusted, OPTIONALLY return CTAP2_ERR_XXX.
 
        1. Store `(alg, aaguid, S)` internally.
 
