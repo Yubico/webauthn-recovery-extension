@@ -457,10 +457,6 @@ A CBOR map with contents as defined above.
 The following CTAP2 commands are added. They are not exposed via any browser
 API.
 
-NOTE: the `s, S` key pair is used in ECDH as well as to derive the recovery
-credential key pair. If desired, two distinct key pairs can be used, increasing
-the amount of data in the Export/Import commands below.
-
 
 ### Export Recovery Seed
 
