@@ -41,12 +41,12 @@ non-correlatable public keys.
 
 # Terminology
 
-The following byte array manipulation functions are used throughout this
-document:
+The following terms are used throughout this document:
 
 - `LEFT(X, n)` is the first `n` bytes of the byte array `X`.
 - `DROP_LEFT(X, n)` is the byte array `X` without the first `n` bytes.
 - `DROP_RIGHT(X, n)` is the byte array `X` without the last `n` bytes.
+- CTAP2_ERR_XXX represents some not yet specified error code.
 
 
 # The key agreement scheme
@@ -557,7 +557,6 @@ Exports a seed which can be imported into other authenticators, enabling them to
 register credentials on behalf of the exporting authenticator, for the purpose
 of account recovery.
 
-CTAP2_ERR_XXX represents some not yet specified error code.
 
 Following operations are performed to get a recovery seed:
 
@@ -614,8 +613,6 @@ credentials on behalf of a backup authenticator. Multiple recovery seeds can be
 imported into an authenticator, limited by storage space. Resetting the
 authenticator removes all stored recovery seeds, and resets the `state` counter
 to 0.
-
-CTAP2_ERR_XXX represents some not yet specified error code.
 
 Following operations are performed to get a recovery seed:
 
