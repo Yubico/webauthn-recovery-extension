@@ -316,6 +316,7 @@ If `action` is
              3. Let `okm` be 64 bytes of output keying material from [HKDF][hkdf]
                 with the arguments:
 
+                - `Hash`: SHA-256.
                 - `salt`: Not set.
                 - `IKM`: `ikm_x`.
                 - `info`: Not set.
@@ -395,6 +396,7 @@ If `action` is
              4. Let `okm` be 64 bytes of output keying material from [HKDF][hkdf]
                 with the arguments:
 
+                - `Hash`: SHA-256.
                 - `salt`: Not set.
                 - `IKM`: `ikm_x`.
                 - `info`: Not set.
