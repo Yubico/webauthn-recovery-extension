@@ -791,6 +791,9 @@ credential, the RP performs the following procedure:
     credentials associated with it. This step and the registration of the new
     credential SHOULD be performed as an atomic operation.
 
+ 1. It is RECOMMENDED to send the user an e-mail or similar notification about
+    this change to their account.
+
  1. If `extOutput.state` is greater than 0, the RP SHOULD initiate
     recovery credential registration (`action = "generate"`) for the newly
     registered credential.
