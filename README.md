@@ -485,60 +485,129 @@ A CBOR map with contents as defined above.
 
 ## Authenticator operations
 
-The following CTAP2 commands are added. They are not exposed via any browser
-API.
+The CTAP2 command `authenticatorRecovery` is added. It is not exposed via any
+browser API.
 
 
-### Export Recovery Seed
+### authenticatorRecovery (0x0D)
+
+This command is used to export a recovery seed from a backup authenticator and
+then to import the seed to another authenticator, so that the latter can issue
+recovery credentials on behalf of the backup authenticator.
+
+It takes the following input parameters:
+
+  | Parameter name | Data type | Required? | Definition
+  | --- | ---- | ---- | -----------
+  | subCommand (0x01) | Unsigned integer | Required | Identifier for the subcommand to execute.
+  | allowAlgs (0x02) | Array of unsigned integers | Optional | Required if subCommand = exportSeed (0x02). List of acceptable key agreement schemes for seed export.
+  | seed (0x03) | RecoverySeed | Optional | Required if subCommand = importSeed (0x03). Recovery seed to import.
+  | pinUvAuthProtocol (0x04) | Unsigned integer | Required | PIN/UV protocol version chosen by the client.
+  | pinUvAuthParam (0x05) | Byte array | Required | First 16 bytes of HMAC-SHA-256 of contents using pinUvAuthToken
+
+The list of sub commands for recovery seeds is:
+
+  | subCommand Name | subCommand Number
+  | --- | ----
+  | getAllowAlgs | 0x01
+  | exportSeed | 0x02
+  | importSeed | 0x03
+
+The RecoverySeed type is a CBOR map with the following structure:
+
+  | Member name | Data type | Required? | Definition
+  | --- | ---- | ---- | -----------
+  | alg (0x01) | Unsigned integer | Required | Identifier for the key agreement scheme.
+  | aaguid (0x02) | Byte array | Required | AAGUID of the authenticator that exported the `payload`.
+  | x5c (0x03) | Array of byte arrays | Required | Sequence of DER encoded X.509 attestation certificates
+  | sig (0x04) | Byte array | Required | DER encoded ECDSA signature.
+  | S_enc (0xFF) | Byte array | Optional | Required if alg = 0x00. P-256 public key encoded as described in [SEC 1][sec1], section 2.3.4, using point compression.
+
+On success, authenticator returns the following structure in its response:
+
+  | Parameter name | Data type | Required? | Definition
+  | --- | ---- | ---- | -----------
+  | allowAlgs (0x02) | Array of unsigned integers | Optional | List of key agreement schemes the authenticator supports.
+  | seed (0x03) | RecoverySeed | Optional | Recovery seed to be imported by another authenticator.
+
+
+#### Feature detection
+
+TODO
+
+
+#### Get supported key agreement schemes (subCommand 0x01)
+
+Used by the platform to get a suitable value for the allowAlgs (0x02) parameter
+of the exportSeed (0x02) subcommand.
+
+Following operations are performed to get the list of recovery key agreement
+schemes an authenticator supports:
+
+- Platform sends authenticatorRecovery command with following parameters:
+  - subCommand (0x01): getAllowAlgs (0x01)
+  - Authenticator returns authenticatorRecovery response with following
+    parameters:
+    - allowAlgs (0x02): An array containing the integer 0 as the only element.
+
+
+#### Export Recovery Seed (subCommand 0x02)
 
 Exports a seed which can be imported into other authenticators, enabling them to
 register credentials on behalf of the exporting authenticator, for the purpose
 of account recovery.
 
-This command takes the following arguments:
+CTAP2_ERR_XXX represents some not yet specified error code.
 
-- `allow_algs`: A CBOR array of unsigned 8-bit integers.
+Following operations are performed to get a recovery seed:
 
  1. Perform user verification and a test of user presence. If either fails,
     return CTAP2_ERR_XXX.
 
- 1. For each `alg` in `allow_algs`:
+- Platform sends authenticatorRecovery command with following parameters:
+  - subCommand (0x01): exportSeed (0x02)
+  - allowAlgs (0x02): Output from getAllowAlgs (0x01) subcommand on a different
+    authenticator
+- Authenticator performs following steps:
 
-     1. If `alg` equals:
+   1. For each `alg` in `allowAlgs`:
 
-        - 0:
+       1. If `alg` equals:
 
-           1. If the recovery functionality is uninitialized, generate a new EC
-              P-256 key pair and store it as `s, S`. The `authenticatorReset`
-              command MUST erase `s` and `S`.
+          - 0:
 
-           2. Let `S_enc` be `S` encoded as described in [SEC 1][sec1], section
-              2.3.3, using point compression.
+             1. If the recovery functionality is uninitialized, generate a new EC
+                P-256 key pair and store it as `s, S`. The `authenticatorReset`
+                command MUST erase `s` and `S`.
 
-           3. Let `sig` be an ECDSA signature over the data `alg || aaguid ||
-              S_enc` using the authenticator's attestation key and the SHA-256
-              hash algorithm. `sig` is DER encoded as described in [RFC
-              3279][rfc3279].
+             1. Let `S_enc` be `S` encoded as described in [SEC 1][sec1], section
+                2.3.3, using point compression.
 
-           4. Return the following output encoded as a CBOR map in [CTAP2
-              canonical CBOR encoding form][ctap2-canon]:
+             1. Let `sig` be an ECDSA signature over the data `alg || aaguid ||
+                S_enc` using the authenticator's attestation key and the SHA-256
+                hash algorithm. `sig` is DER encoded as described in [RFC
+                3279][rfc3279].
 
-                  {
-                    1: alg  # Identifier for the key agreement scheme
-                    2: aaguid,  # Device AAGUID as a byte string.
-                    3: x5c,  # Sequence of byte strings containing DER encoded X509 certificates
-                    4: sig  # ECDSA signature as described above
-                    -1: S_enc  # Public key encoded as described above
-                  }
+             1. Authenticator returns authenticatorRecovery response with
+                following parameters:
 
-        - anything else:
+                - seed (0x03): RecoverySeed structure with following parameters:
+                  - alg (0x01): `alg`
+                  - aaguid (0x02): Authenticator's AAGUID
+                  - x5c (0x03): Authenticator's attestation certificate chain as
+                    DER encoded X.509 certificates, with leaf attestation
+                    certificate as the first element
+                  - sig (0x04): `sig` as computed above
+                  - S_enc (0xFF): `S_enc` as computed above
 
-           1. _Continue_.
+          - anything else:
 
- 2. Return CTAP2_ERR_XXX.
+             1. _Continue_.
+
+   2. Return CTAP2_ERR_XXX.
 
 
-### Import Recovery Seed
+#### Import Recovery Seed (subCommand 0x03)
 
 Imports a recovery seed, enabling this authenticator to issue recovery
 credentials on behalf of a backup authenticator. Multiple recovery seeds can be
@@ -546,69 +615,73 @@ imported into an authenticator, limited by storage space. Resetting the
 authenticator removes all stored recovery seeds, and resets the `state` counter
 to 0.
 
-This command takes the following arguments:
-
-- `payload`: The output of _Export Recovery Seed_ from another authenticator.
-  This is a CBOR map containing at least the following keys:
-
-  | Key | Type | Name | Description
-  | --- | ---- | ---- | -----------
-  | 1 | Unsigned integer | `alg` | Identifier for the key agreement scheme.
-  | 2 | Byte string | `aaguid` | AAGUID of the authenticator that exported the `payload`.
-  | 3 | Array of byte strings | `x5c` | Sequence of DER encoded X.509 attestation certificates
-  | 4 | Byte string | `sig` | DER encoded ECDSA signature.
-
-  Depending on the value of `alg`, additional keys are required as detailed in
-  the following algorithm.
-
-
 CTAP2_ERR_XXX represents some not yet specified error code.
 
- 1. Perform user verification and a test of user presence. If either fails,
-    return CTAP2_ERR_XXX.
+Following operations are performed to get a recovery seed:
 
- 1. If the authenticator has no storage space available to import a recovery
-    seed, return CTAP2_ERR_XXX.
+- Platform gets pinUvAuthToken from the authenticator.
+- Platform sends authenticatorRecovery command with following parameters:
+  - subCommand (0x01): exportSeed (0x02)
+  - seed (0x03): Output from exportSeed (0x01) subcommand on a different
+    authenticator, containing following parameters:
+    - alg (0x01): Identifier for key agreement scheme
+    - aaguid (0x02): AAGUID of the authenticator that exported the seed
+    - x5c (0x03): Attestation certificate chain of the authenticator that
+      exported the seed
+    - sig (0x04): Attestation signature over the seed contents
+    - S_enc (0xFF): Required if alg = 0x00. EC public key encoded with point compression.
 
- 1. Verify that `payload` is encoded in [CTAP2 canonical CBOR encoding
-    form][ctap2-canon]. If not, return CTAP2_ERR_XXX.
+  - pinUvAuthProtocol (0x04): Pin Protocol used. Currently this is 0x01.
+  - pinUvAuthParam (0x05): `LEFT(HMAC-SHA-256(pinUvAuthToken, importSeed
+    (0x03)), 16)`.
 
- 1. If `alg` equals:
+- Authenticator verifies pinUvAuthParam by generating
+  `LEFT(HMAC-SHA-256(pinUvAuthToken, importSeed (0x03)), 16)` and matching
+  against input pinUvAuthParam parameter.
+  - If pinUvAuthParam verification fails, authenticator returns
+    CTAP2_ERR_PIN_AUTH_INVALID error.
+  - If authenticator sees 3 consecutive mismatches, it returns
+    CTAP2_ERR_PIN_AUTH_BLOCKED indicating that power recycle is needed for
+    further operations. This is done so that malware running on the platform
+    should not be able to block the device without user interaction.
 
-    - 0:
+- Authenticator performs following steps:
 
-      The following additional keys are required in `payload`:
+   1. If the authenticator has no storage space available to import a recovery
+      seed, return CTAP2_ERR_XXX.
 
-      | Key | Type | Name | Description
-      | --- | ---- | ---- | -----------
-      | -1 | Byte string | `S_enc` | P-256 public key encoded as described in [SEC 1][sec1], section 2.3.4, using point compression.
+   1. If `alg` equals:
 
-       1. Let `S` be the P-256 public key decoded from the compressed point
-          `S_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
-          return CTAP2_ERR_XXX.
+      - 0:
 
-       1. Let `attestation_cert` be the first element of `x5c`.
+         1. Let `S` be the P-256 public key decoded from the compressed point
+            `S_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
+            return CTAP2_ERR_XXX.
 
-       1. Extract the public key from `attestation_cert` and use it to verify
-          the signature `sig` against the signed data `alg || aaguid || S_enc`.
-          If invalid, return CTAP2_ERR_XXX.
+         1. Let `attestation_cert` be the first element of `x5c`.
 
-       1. If `attestation_cert` contains an extension with OID
-          1.3.6.1.4.1.45724.1.1.4 (`id-fido-gen-ce-aaguid`), verify that the
-          value of this extension equals `aaguid`.
+         1. Extract the public key from `attestation_cert` and use it to verify
+            the signature `sig` against the signed data `alg || aaguid ||
+            S_enc`. If invalid, return CTAP2_ERR_XXX.
 
-       1. OPTIONALLY, perform this sub-step:
-           1. Using a vendor-specific store of trusted attestation CA
-              certificates, verify the signature chain `x5c`.
-              If invalid or untrusted, OPTIONALLY return CTAP2_ERR_XXX.
+         1. If `attestation_cert` contains an extension with OID
+            1.3.6.1.4.1.45724.1.1.4 (`id-fido-gen-ce-aaguid`), verify that the
+            value of this extension equals `aaguid`.
 
-       1. Store `(alg, aaguid, S)` internally.
+         1. OPTIONALLY, perform this sub-step:
+             1. Using a vendor-specific store of trusted attestation CA
+                certificates, verify the signature chain `x5c`. If invalid or
+                untrusted, OPTIONALLY return CTAP2_ERR_XXX.
 
-    - anything else:
+         1. Store `(alg, aaguid, S)` internally.
 
-       1. Return CTAP2_ERR_XXX.
+      - anything else:
 
- 1. Increment the `state` counter by one (the counter's initial value is 0).
+         1. Return CTAP2_ERR_XXX.
+
+   1. Increment the `state` counter by one (the counter's initial value is 0).
+
+   1. Return CTAP2_OK.
 
 
 ## RP operations
