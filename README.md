@@ -63,8 +63,7 @@ private keys without further communication with Mary.
 
 The scheme is divided into three stages ordered in this forward sequence:
 
-- In stage 1, Mary and Bob may communicate to perform some initial setup. Robin
-  may not communicate with Mary or Bob.
+- In stage 1, only Mary and Bob may communicate.
 
   ```
   Mary <-> Bob
@@ -73,6 +72,9 @@ The scheme is divided into three stages ordered in this forward sequence:
 
   Robin
   ```
+
+  This corresponds to the initial setup done to pair the main authenticator with
+  the backup authenticator.
 
 - In stage 2, only Mary and Robin may communicate.
 
@@ -84,6 +86,9 @@ The scheme is divided into three stages ordered in this forward sequence:
   Robin
   ```
 
+  This corresponds to using the main authenticator for day-to-day authentication
+  while the backup authenticator is stored away in a safe place.
+
 - In stage 3, only Bob and Robin may communicate.
 
   ```
@@ -93,6 +98,9 @@ The scheme is divided into three stages ordered in this forward sequence:
             |
   Robin <---+
   ```
+
+  This corresponds to the main authenticator being lost and no longer available,
+  and the backup authenticator having been retrieved from storage.
 
 
 ## Stage 1: Setup
