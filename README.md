@@ -684,8 +684,6 @@ procedure:
         `extOutput.state` is not present, or `extOutput.creds` is not present,
         abort the ceremony with an error.
 
-     1. If `extOutput` is null, abort the ceremony with an error.
-
      1. Set `recoveryStates[pkc.id] = (extOutput.state, extOutput.creds)`.
 
      1. Show the user a confirmation message containing the length of
