@@ -658,7 +658,8 @@ ceremonies:
                  1. If the ceremony finishes successfully, prompt the user that
                     their recovery credentials need to be updated and ask to
                     initiate a _Registering recovery credentials_ ceremony as
-                    described below.
+                    described below. It is RECOMMENDED to set `allowCredentials`
+                    to contain only `pkc.id` in this authentication ceremony.
 
  4. Continue with the remaining steps of the standard authentication ceremony.
 
@@ -669,7 +670,12 @@ To register new recovery credentials for a given main credential, or replace the
 existing recovery credentials with updated ones, the RP performs the following
 procedure:
 
- 1. Initiate a `get()` operation and set the extension `"recovery": {"action": "generate"}`.
+ 1. Initiate a `get()` operation and set the extension `"recovery": {"action":
+    "generate"}`.
+
+    If this ceremony was triggered as described in _Detecting changes to
+    recovery seeds_, it is RECOMMENDED to set `allowCredentials` to contain only
+    the credential that was used in that preceding ceremony.
 
  1. Let `pkc` be the PublicKeyCredential response from the client. If the
     operation fails, abort the ceremony with an error.
