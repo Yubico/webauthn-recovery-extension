@@ -309,37 +309,43 @@ If `action` is
 
              1. Generate an ephemeral EC P-256 key pair: `e, E`.
 
-             2. Let `ikm = ECDH(e, S)`. Let `ikm_x` be the X coordinate of `ikm`,
+             1. Let `ikm = ECDH(e, S)`. Let `ikm_x` be the X coordinate of `ikm`,
                 encoded as a byte string of length 32 as described in
                 [SEC 1][sec1], section 2.3.7.
 
-             3. Let `okm` be 64 bytes of output keying material from [HKDF][hkdf]
+             1. Let `prk` be the pseudorandom key output from [HKDF-Extract][hkdf]
                 with the arguments:
 
                 - `Hash`: SHA-256.
                 - `salt`: Not set.
                 - `IKM`: `ikm_x`.
+
+             1. Let `okm` be 64 bytes of output keying material from [HKDF-Expand][hkdf]
+                with the arguments:
+
+                - `Hash`: SHA-256.
+                - `PRK`: `prk`.
                 - `info`: Not set.
                 - `L`: 64.
 
-                Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
+             1. Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
                 32), 32)`.
 
-             4. If `credKey >= n`, where `n` is the order of the P-256 curve,
+             1. If `credKey >= n`, where `n` is the order of the P-256 curve,
                 start over from 1.
 
-             5. Let `P = (credKey * G) + S`, where * and + are EC point
+             1. Let `P = (credKey * G) + S`, where * and + are EC point
                 multiplication and addition, and `G` is the generator of the P-256
                 curve.
 
-             6. If `P` is the point at infinity, start over from 1.
+             1. If `P` is the point at infinity, start over from 1.
 
-             7. Let `rpIdHash` be the SHA-256 hash of `rpId`.
+             1. Let `rpIdHash` be the SHA-256 hash of `rpId`.
 
-             8. Let `S_enc` be `E` encoded as described in [SEC 1][sec1], section
+             1. Let `S_enc` be `E` encoded as described in [SEC 1][sec1], section
                 2.3.3, using point compression.
 
-             9. Set `credentialId = alg || E_enc || LEFT(HMAC(macKey, alg || E_enc ||
+             1. Set `credentialId = alg || E_enc || LEFT(HMAC(macKey, alg || E_enc ||
                 rpIdHash), 16)`.
 
           - anything else:
@@ -385,41 +391,47 @@ If `action` is
 
              1. Let `E_enc = DROP_LEFT(DROP_RIGHT(cred.id, 16), 1)`.
 
-             2. Let `E` be the P-256 public key decoded from the compressed point
+             1. Let `E` be the P-256 public key decoded from the compressed point
                 `E_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
                 return CTAP2_ERR_XXX.
 
-             3. Let `ikm = ECDH(s, E)`. Let `ikm_x` be the X coordinate of `ikm`,
+             1. Let `ikm = ECDH(s, E)`. Let `ikm_x` be the X coordinate of `ikm`,
                 encoded as a byte string of length 32 as described in
                 [SEC 1][sec1], section 2.3.7.
 
-             4. Let `okm` be 64 bytes of output keying material from [HKDF][hkdf]
+             1. Let `prk` be the pseudorandom key output from [HKDF-Extract][hkdf]
                 with the arguments:
 
                 - `Hash`: SHA-256.
                 - `salt`: Not set.
                 - `IKM`: `ikm_x`.
+
+             1. Let `okm` be 64 bytes of output keying material from [HKDF-Expand][hkdf]
+                with the arguments:
+
+                - `Hash`: SHA-256.
+                - `PRK`: `prk`.
                 - `info`: Not set.
                 - `L`: 64.
 
-                Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
+             1. Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
                 32), 32)`.
 
-             5. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
+             1. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
 
-             6. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
+             1. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
                 || E || rpIdHash), 16)`, _continue_.
 
-             7. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
+             1. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
                 curve.
 
-             8. Let `authenticatorDataWithoutExtensions` be the [authenticator
+             1. Let `authenticatorDataWithoutExtensions` be the [authenticator
                 data][authdata] that will be returned from this registration operation,
                 but without the `extensions` part. The `ED` flag in
                 `authenticatorDataWithoutExtensions` MUST be set to 1 even though
                 `authenticatorDataWithoutExtensions` does not include extension data.
 
-             9. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
+             1. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
                 clientDataHash` using `p`.
 
           - anything else:
