@@ -345,7 +345,7 @@ If `action` is
              1. Let `S_enc` be `E` encoded as described in [SEC 1][sec1], section
                 2.3.3, using point compression.
 
-             1. Set `credentialId = alg || E_enc || LEFT(HMAC(macKey, alg || E_enc ||
+             1. Set `credentialId = alg || E_enc || LEFT(HMAC-SHA-256(macKey, alg || E_enc ||
                 rpIdHash), 16)`.
 
           - anything else:
@@ -419,7 +419,7 @@ If `action` is
 
              1. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
 
-             1. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC(macKey, alg
+             1. If `cred.id` is not exactly equal to `alg || E || LEFT(HMAC-SHA-256(macKey, alg
                 || E || rpIdHash), 16)`, _continue_.
 
              1. Let `p = credKey + s (mod n)`, where `n` is the order of the P-256
