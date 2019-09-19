@@ -687,6 +687,9 @@ credential, the RP performs the following procedure:
 
              1. If `cred.credentialId` equals `extOutput.credId`:
 
+                 1. Verify that `credentialId` equals the `id` member of some
+                    element of `allowCredentials`.
+
                  1. Let `publicKey` be the decoded public key `cred.credentialPublicKey`.
 
                  1. Let `authenticatorDataWithoutExtensions` be
