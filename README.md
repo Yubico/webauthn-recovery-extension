@@ -684,10 +684,24 @@ procedure:
         `extOutput.state` is not present, or `extOutput.creds` is not present,
         abort the ceremony with an error.
 
-     1. Set `recoveryStates[pkc.id] = (extOutput.state, extOutput.creds)`.
+     1. Let `acceptedCreds` be a new empty list.
+
+     1. Let `rejectedCreds` be a new empty list.
+
+     1. For each `cred` in `extOutput.creds`:
+
+         1. If `cred.aaguid` identifies an authenticator model accepted by the
+            RP's policy, add `cred` to `acceptedCreds`. Otherwise, add `cred` to
+            `rejectedCreds`.
+
+     1. Set `recoveryStates[pkc.id] = (extOutput.state, acceptedCreds)`.
 
      1. Show the user a confirmation message containing the length of
-        `extOutput.creds`.
+        `acceptedCreds`.
+
+     1. If `rejectedCreds` is not empty, show the user a warning message. The
+        warning message SHOULD contain the length of `rejectedCreds` and, if
+        possible, descriptions of the AAGUIDs that were rejected.
 
  1. Continue with the remaining steps of the standard authentication ceremony.
 
