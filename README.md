@@ -192,8 +192,8 @@ In summary, the extension works like this:
     authenticator receives the recovery credential IDs from the RP, and can use
     one of them to derive the private key corresponding to the recovery public
     key. The backup authenticator uses this private key to sign the new
-    credential, thus creating a signature chain from the main credential to the
-    new credential.
+    credential public key, thus creating a signature chain from the main
+    credential to the new credential.
 
  1. Upon verifying the recovery signature, the RP invalidates the main
     credential and all recovery credentials associated with it, and replaces it
