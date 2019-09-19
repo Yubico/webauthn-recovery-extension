@@ -619,25 +619,76 @@ The following operations assume that each user account contains a
 `recoveryStates` is initialized to an empty map.
 
 
+### Detecting changes to recovery seeds
+
+To detect when the user's authenticator has updated its recovery seed settings,
+the RP SHOULD add the following steps to all registration and authentication
+ceremonies:
+
+ 1. When initiating any `create()` or `get()` operation, set the extension
+    `"recovery": {"action": "state"}`.
+
+ 1. Let `pkc` be the PublicKeyCredential response from the client.
+
+ 1. In step 14 of the RP Operation to [Register a New
+    Credential][rp-reg-ext-processing], or 15 of the RP Operation to [Verify an
+    Authentication Assertion][rp-auth-ext-processing], perform the following
+    steps:
+
+     1. Let `extOutput` be the recovery extension output, or null if not
+        present. For `create()` ceremonies, this is `extOutput =
+        pkc.response.attestationObject["authData"].extensions["recovery"]`; for
+        `get()` ceremonies it is `extOutput =
+        pkc.response.authenticatorData.extensions["recovery"]`.
+
+     1. If `extOutput` is not null:
+
+         1. If `extOutput.action` does not equal `"state"`, or `extOutput.state`
+            is not present, abort this extension processing and OPTIONALLY show
+            a user-visible warning.
+
+         1. If `extOutput.state > 0`:
+
+             1. Let `recoveryState = recoveryStates[pkc.id]`, or null if not
+                present.
+
+             1. If `recoveryState` is null or `extOutput.state >
+                recoveryState.state`:
+
+                 1. If the ceremony finishes successfully, prompt the user that
+                    their recovery credentials need to be updated and ask to
+                    initiate a _Registering recovery credentials_ ceremony as
+                    described below.
+
+ 4. Continue with the remaining steps of the standard authentication ceremony.
+
+
 ### Registering recovery credentials
 
-To register new backup credentials for a given main credential, or replace the
-existing backup credentials with updated ones, the RP performs the following
+To register new recovery credentials for a given main credential, or replace the
+existing recovery credentials with updated ones, the RP performs the following
 procedure:
 
  1. Initiate a `get()` operation and set the extension `"recovery": {"action": "generate"}`.
 
- 2. Let `pkc` be the PublicKeyCredential response from the client. If the
+ 1. Let `pkc` be the PublicKeyCredential response from the client. If the
     operation fails, abort the ceremony with an error.
 
- 3. In step 15 of the RP Operation to [Verify an Authentication
+ 1. In step 15 of the RP Operation to [Verify an Authentication
     Assertion][rp-auth-ext-processing], perform the following steps:
 
-     1. Let `extOutput = pkc.response.authenticatorData.extensions["recovery"]`.
+     1. Let `extOutput = pkc.response.authenticatorData.extensions["recovery"]`,
+        or null if not present.
+
+     1. If `extOutput` is null, `extOutput.action` does not equal `"generate"`,
+        `extOutput.state` is not present, or `extOutput.creds` is not present,
+        abort the ceremony with an error.
+
+     1. If `extOutput` is null, abort the ceremony with an error.
 
      1. Set `recoveryStates[pkc.id] = (extOutput.state, extOutput.creds)`.
 
- 4. Continue with the remaining steps of the standard authentication ceremony.
+ 1. Continue with the remaining steps of the standard authentication ceremony.
 
 
 ### Using a recovery credential to replace a lost main credential
@@ -677,7 +728,12 @@ credential, the RP performs the following procedure:
  1. In step 14 of the RP Operation to [Register a New
     Credential][rp-reg-ext-processing], perform the following steps:
 
-     1. Let `extOutput = pkc.response.authenticatorData.extensions["recovery"']`.
+     1. Let `extOutput = pkc.response.authenticatorData.extensions["recovery"]`,
+        or null if not present.
+
+     1. If `extOutput` is null, `extOutput.action` does not equal `"recover"`,
+        `extOutput.state` is not present, `extOutput.credId` is not present, or
+        `extOutput.sig` is not present, abort the ceremony with an error.
 
      1. Let `revokedCredId` be null.
 
