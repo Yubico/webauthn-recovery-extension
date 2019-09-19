@@ -432,7 +432,8 @@ If `action` is
                 `authenticatorDataWithoutExtensions` does not include extension data.
 
              1. Let `sig` be a signature over `authenticatorDataWithoutExtensions ||
-                clientDataHash` using `p`.
+                clientDataHash` using `p`. `sig` is DER encoded as described in [RFC
+                3279][rfc3279].
 
           - anything else:
 
