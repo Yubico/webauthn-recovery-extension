@@ -1,1 +1,0 @@
-Original (not publicly accessible): https://gitlab.in.yubico.org/snippets/96
