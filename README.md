@@ -688,6 +688,9 @@ procedure:
 
      1. Set `recoveryStates[pkc.id] = (extOutput.state, extOutput.creds)`.
 
+     1. Show the user a confirmation message containing the length of
+        `extOutput.creds`.
+
  1. Continue with the remaining steps of the standard authentication ceremony.
 
 
