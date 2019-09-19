@@ -645,6 +645,8 @@ procedure:
 To authenticate the user with a recovery credential and create a new main
 credential, the RP performs the following procedure:
 
+ 1. Identify the user, for example by asking for a username.
+
  1. Let `allowCredentials` be a new empty list.
 
  1. For each `(state, creds)` value in the `recoveryStates` map stored in the
@@ -721,6 +723,10 @@ credential, the RP performs the following procedure:
  1. If `extOutput.state` is greater than 0, the RP SHOULD initiate
     recovery credential registration (`action = "generate"`) for the newly
     registered credential.
+
+When identifying the user and building the `allowCredentials` list, please
+consider the [risk of privacy leak via Credential
+IDs](#sctn-credential-id-privacy-leak).
 
 As an alternative to proceeding to register a new credential for the backup
 authenticator, the RP MAY choose to not replace the lost credential with the new
