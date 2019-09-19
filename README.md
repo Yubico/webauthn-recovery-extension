@@ -256,7 +256,7 @@ is applicable for the given WebAuthn operation:
 
 | Value    | create()   | get()   | Description                                                                                          |
 | :------: | :--------: | :-----: | -------------                                                                                        |
-| state    | X          | X       | Get the state counter value from the main authenticator.                                             |
+| state    | X          | X       | Get the _recovery credentials state counter_ value from the main authenticator.                      |
 | generate |            | X       | Regenerate recovery credentials from the main authenticator.                                         |
 | recover  | X          |         | Get a recovery signature from a backup authenticator, to replace the main credential with a new one. |
 
