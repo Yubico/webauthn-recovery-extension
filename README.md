@@ -901,7 +901,8 @@ credential, the RP performs the following procedure:
     authenticator.
 
  1. Invalidate the credential identified by `revokedCredId` and all recovery
-    credentials associated with it. This step and the registration of the new
+    credentials associated with it (i.e., delete
+    `recoveryStates[revokedCredId]`). This step and the registration of the new
     credential SHOULD be performed as an atomic operation.
 
  1. It is RECOMMENDED to send the user an e-mail or similar notification about
