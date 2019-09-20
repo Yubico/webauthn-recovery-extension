@@ -575,13 +575,26 @@ of account recovery.
 
 Following operations are performed to get a recovery seed:
 
- 1. Perform user verification and a test of user presence. If either fails,
-    return CTAP2_ERR_XXX.
-
+- Platform gets pinUvAuthToken from the authenticator.
 - Platform sends authenticatorRecovery command with following parameters:
   - subCommand (0x01): exportSeed (0x02)
   - allowAlgs (0x02): Output from getAllowAlgs (0x01) subcommand on a different
     authenticator
+
+  - pinUvAuthProtocol (0x04): Pin Protocol used. Currently this is 0x01.
+  - pinUvAuthParam (0x05): `LEFT(HMAC-SHA-256(pinUvAuthToken, exportSeed
+    (0x02)), 16)`.
+
+- Authenticator verifies pinUvAuthParam by generating
+  `LEFT(HMAC-SHA-256(pinUvAuthToken, exportSeed (0x02)), 16)` and matching
+  against input pinUvAuthParam parameter.
+  - If pinUvAuthParam verification fails, authenticator returns
+    CTAP2_ERR_PIN_AUTH_INVALID error.
+  - If authenticator sees 3 consecutive mismatches, it returns
+    CTAP2_ERR_PIN_AUTH_BLOCKED indicating that power recycle is needed for
+    further operations. This is done so that malware running on the platform
+    should not be able to block the device without user interaction.
+
 - Authenticator performs following steps:
 
    1. For each `alg` in `allowAlgs`:
