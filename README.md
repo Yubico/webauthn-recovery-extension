@@ -767,7 +767,8 @@ ceremonies:
                     described below. It is RECOMMENDED to set `allowCredentials`
                     to contain only `pkc.id` in this authentication ceremony.
 
- 4. Continue with the remaining steps of the standard authentication ceremony.
+ 4. Continue with the remaining steps of the standard registration or
+    authentication ceremony.
 
 
 ### Registering recovery credentials
