@@ -633,7 +633,7 @@ Following operations are performed to get a recovery seed:
 
 - Platform gets pinUvAuthToken from the authenticator.
 - Platform sends authenticatorRecovery command with following parameters:
-  - subCommand (0x01): exportSeed (0x02)
+  - subCommand (0x01): importSeed (0x03)
   - seed (0x03): Output from exportSeed (0x01) subcommand on a different
     authenticator, containing following parameters:
     - alg (0x01): Identifier for key agreement scheme
