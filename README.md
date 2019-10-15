@@ -143,19 +143,20 @@ The following steps are performed by Bob.
  1. Retrieve a set of `credential_id`s from Robin. Perform the following steps
     for each `credential_id`.
 
- 2. Let `E = DROP_RIGHT(credential_id, 16)`.
+ 1. Let `E = DROP_RIGHT(credential_id, 16)`. Verify that `E` is not the point at
+    infinity.
 
- 3. Use `HKDF(ECDH(s, E))` to derive `cred_key`, `mac_key`.
+ 1. Use `HKDF(ECDH(s, E))` to derive `cred_key`, `mac_key`.
 
- 4. Verify that `credential_id == E || LEFT(HMAC(mac_key, E || rp_id), 16)`. If
+ 1. Verify that `credential_id == E || LEFT(HMAC(mac_key, E || rp_id), 16)`. If
     not, this `credential_id` was generated for a different backup authenticator
     than Bob or a different relying party than Robin, and is not processed
     further.
 
- 5. Calculate `p = cred_key + s mod n`,
+ 1. Calculate `p = cred_key + s mod n`,
     where `n` is the order of the P-256 curve.
 
- 6. The private key is `p`, which Bob can now use to create a signature.
+ 1. The private key is `p`, which Bob can now use to create a signature.
 
 As a result of these procedures, Bob will have derived `p` such that
 
@@ -307,7 +308,8 @@ If `action` is
 
           - 0:
 
-             1. Generate an ephemeral EC P-256 key pair: `e, E`.
+             1. Generate an ephemeral EC P-256 key pair: `e, E`. `E` MUST NOT be
+                the point at infinity.
 
              1. Let `ikm = ECDH(e, S)`. Let `ikm_x` be the X coordinate of `ikm`,
                 encoded as a byte string of length 32 as described in
@@ -394,6 +396,8 @@ If `action` is
              1. Let `E` be the P-256 public key decoded from the compressed point
                 `E_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
                 return CTAP2_ERR_XXX.
+
+             1. If `E` is the point at infinity, return CTAP2_ERR_XXX.
 
              1. Let `ikm = ECDH(s, E)`. Let `ikm_x` be the X coordinate of `ikm`,
                 encoded as a byte string of length 32 as described in
