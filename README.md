@@ -53,50 +53,50 @@ The following terms are used throughout this document:
 
 The scheme has three participants:
 
-- Bob, corresponding to the "backup" authenticator.
-- Mary, corresponding to the "primary" authenticator.
-- Robin, corresponding to the WebAuthn Relying Party (RP).
+- PA: the _primary authenticator_
+- BA: the _backup authenticator_
+- RP: the WebAuthn _Relying Party_
 
-The goal is that Mary will generate public keys for Robin to store. At a later
-time, Bob will request the public keys from Robin and derive the corresponding
-private keys without further communication with Mary.
+The goal is that PA will generate public keys for RP to store. At a later
+time, BA will request the public keys from RP and derive the corresponding
+private keys without further communication with PA.
 
 The scheme is divided into three stages ordered in this forward sequence:
 
-- In stage 1, only Mary and Bob may communicate.
+- In stage 1, only PA and BA may communicate.
 
   ```
-  Mary <-> Bob
+  PA <-> BA
 
 
 
-  Robin
+  RP
   ```
 
   This corresponds to the initial setup done to pair the primary authenticator
   with the backup authenticator.
 
-- In stage 2, only Mary and Robin may communicate.
+- In stage 2, only PA and RP may communicate.
 
   ```
-  Mary     Bob
+  PA     BA
    ^
    |
    v
-  Robin
+  RP
   ```
 
   This corresponds to using the primary authenticator for day-to-day
   authentication while the backup authenticator is stored away in a safe place.
 
-- In stage 3, only Bob and Robin may communicate.
+- In stage 3, only BA and RP may communicate.
 
   ```
-  Mary     Bob
-            ^
-            |
-            |
-  Robin <---+
+  PA     BA
+         ^
+         |
+         |
+  RP <---+
   ```
 
   This corresponds to the primary authenticator being lost and no longer
@@ -108,15 +108,15 @@ The scheme is divided into three stages ordered in this forward sequence:
 This procedure is performed once to set up the parameters for the key agreement
 scheme.
 
- 1. Bob generates a new P-256 EC key pair with private key `s` and public key
+ 1. BA generates a new P-256 EC key pair with private key `s` and public key
     `S`.
- 2. Bob sends `S` to Mary.
- 3. Robin chooses a unique public identifier `rp_id`.
+ 2. BA sends `S` to PA.
+ 3. RP chooses a unique public identifier `rp_id`.
 
 
 ## Stage 2: Public key creation
 
-The following steps are performed by Mary.
+The following steps are performed by PA, the primary authenticator.
 
  1. Generate an ephemeral EC P-256 key pair: `e`, `E`.
 
@@ -133,14 +133,14 @@ The following steps are performed by Mary.
 
  6. Let `credential_id = E || LEFT(HMAC(mac_key, E || rp_id), 16)`.
 
- 7. Send the pair `(P, credential_id)` to Robin for storage.
+ 7. Send the pair `(P, credential_id)` to RP for storage.
 
 
 ## Stage 3: Private key derivation
 
-The following steps are performed by Bob.
+The following steps are performed by BA, the backup authenticator.
 
- 1. Retrieve a set of `credential_id`s from Robin. Perform the following steps
+ 1. Retrieve a set of `credential_id`s from RP. Perform the following steps
     for each `credential_id`.
 
  1. Let `E = DROP_RIGHT(credential_id, 16)`. Verify that `E` is not the point at
@@ -150,15 +150,14 @@ The following steps are performed by Bob.
 
  1. Verify that `credential_id == E || LEFT(HMAC(mac_key, E || rp_id), 16)`. If
     not, this `credential_id` was generated for a different backup authenticator
-    than Bob or a different relying party than Robin, and is not processed
-    further.
+    than BA or a different relying party than RP, and is not processed further.
 
  1. Calculate `p = cred_key + s mod n`,
     where `n` is the order of the P-256 curve.
 
- 1. The private key is `p`, which Bob can now use to create a signature.
+ 1. The private key is `p`, which BA can now use to create a signature.
 
-As a result of these procedures, Bob will have derived `p` such that
+As a result of these procedures, BA will have derived `p` such that
 
     p * G = (cred_key + s) *   G =
           = cred_key * G + s * G =
