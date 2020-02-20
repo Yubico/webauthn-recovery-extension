@@ -22,15 +22,15 @@ purpose of the backup authenticator.
 
 Under the restriction that we don't want to share any secrets or private keys
 between authenticators, one simple way to solve this would be to import a public
-key from the backup authenticator to the main authenticator, so that the main
-authenticator can also register that public key with each RP. Then the backup
-authenticator can later prove possession of the private key and recover access
-to the account. This has a big drawback, however: a static public key would be
-easily correlatable between RPs or accounts, undermining much of the privacy
-protections in WebAuthn.
+key from the backup authenticator to the primary authenticator, so that the
+primary authenticator can also register that public key with each RP. Then the
+backup authenticator can later prove possession of the private key and recover
+access to the account. This has a big drawback, however: a static public key
+would be easily correlatable between RPs or accounts, undermining much of the
+privacy protections in WebAuthn.
 
 In this document we propose a key agreement scheme which allows a pair of
-authenticators to agree on an EC key pair in such a way that the main
+authenticators to agree on an EC key pair in such a way that the primary
 authenticator can generate nondeterministic public keys, but only the backup
 authenticator can derive the corresponding private keys. We present the scheme
 in the context of a practical application as a WebAuthn extension for account
@@ -54,7 +54,7 @@ The following terms are used throughout this document:
 The scheme has three participants:
 
 - Bob, corresponding to the "backup" authenticator.
-- Mary, corresponding to the "main" authenticator.
+- Mary, corresponding to the "primary" authenticator.
 - Robin, corresponding to the WebAuthn Relying Party (RP).
 
 The goal is that Mary will generate public keys for Robin to store. At a later
@@ -73,8 +73,8 @@ The scheme is divided into three stages ordered in this forward sequence:
   Robin
   ```
 
-  This corresponds to the initial setup done to pair the main authenticator with
-  the backup authenticator.
+  This corresponds to the initial setup done to pair the primary authenticator
+  with the backup authenticator.
 
 - In stage 2, only Mary and Robin may communicate.
 
@@ -86,8 +86,8 @@ The scheme is divided into three stages ordered in this forward sequence:
   Robin
   ```
 
-  This corresponds to using the main authenticator for day-to-day authentication
-  while the backup authenticator is stored away in a safe place.
+  This corresponds to using the primary authenticator for day-to-day
+  authentication while the backup authenticator is stored away in a safe place.
 
 - In stage 3, only Bob and Robin may communicate.
 
@@ -99,8 +99,8 @@ The scheme is divided into three stages ordered in this forward sequence:
   Robin <---+
   ```
 
-  This corresponds to the main authenticator being lost and no longer available,
-  and the backup authenticator having been retrieved from storage.
+  This corresponds to the primary authenticator being lost and no longer
+  available, and the backup authenticator having been retrieved from storage.
 
 
 ## Stage 1: Setup
@@ -175,35 +175,36 @@ CTAP2 commands used to export and import the recovery seed.
 ## Recovery Credentials Extension (`recovery`)
 
 This extension allows for recovery credentials to be registered with an RP,
-which can be used for account recovery in the case of a lost or destroyed _main
-authenticator_. This is done by associating one or more _backup authenticators_
-with the main authenticator, after which the latter can provide additional
-credentials for account recovery to the RP without involving the backup
-authenticators.
+which can be used for account recovery in the case of a lost or destroyed
+_primary authenticator_. This is done by associating one or more _backup
+authenticators_ with the primary authenticator, after which the latter can
+provide additional credentials for account recovery to the RP without involving
+the backup authenticators.
 
 In summary, the extension works like this:
 
- 1. The main authenticator first generates public keys and credential IDs for
+ 1. The primary authenticator first generates public keys and credential IDs for
     recovery credentials. These are stored by the RP and associated with the
-    main authenticator's credential, the _main credential_. These are delivered
-    through the authenticator data, and therefore signed by the main credential.
+    primary authenticator's credential, the _primary credential_. These are
+    delivered through the authenticator data, and therefore signed by the
+    primary credential.
 
- 1. After losing the main authenticator, account recovery can be done by
+ 1. After losing the primary authenticator, account recovery can be done by
     creating a new credential with the backup authenticator. The backup
     authenticator receives the recovery credential IDs from the RP, and can use
     one of them to derive the private key corresponding to the recovery public
     key. The backup authenticator uses this private key to sign the new
-    credential public key, thus creating a signature chain from the main
+    credential public key, thus creating a signature chain from the primary
     credential to the new credential.
 
- 1. Upon verifying the recovery signature, the RP invalidates the main
+ 1. Upon verifying the recovery signature, the RP invalidates the primary
     credential and all recovery credentials associated with it, and replaces it
     with the new credential. The backup authenticator is thus "promoted" and
-    replaces the main authenticator.
+    replaces the primary authenticator.
 
 In order for the RP to detect when recovery credentials can be registered, or
-need to be updated, the main authenticator keeps a _recovery credentials state
-counter_ defined as follows. Let `state` be initialized to 0. Performing a
+need to be updated, the primary authenticator keeps a _recovery credentials
+state counter_ defined as follows. Let `state` be initialized to 0. Performing a
 device reset resets `state` to 0. When the set of registered backup
 authenticators for the device changes (e.g., on adding or removing a backup
 authenticator, including adding the first backup authenticator) `state` is
@@ -257,9 +258,9 @@ is applicable for the given WebAuthn operation:
 
 | Value    | create()   | get()   | Description                                                                                          |
 | :------: | :--------: | :-----: | -------------                                                                                        |
-| state    | X          | X       | Get the _recovery credentials state counter_ value from the main authenticator.                      |
-| generate |            | X       | Regenerate recovery credentials from the main authenticator.                                         |
-| recover  | X          |         | Get a recovery signature from a backup authenticator, to replace the main credential with a new one. |
+| state    | X          | X       | Get the _recovery credentials state counter_ value from the primary authenticator.                      |
+| generate |            | X       | Regenerate recovery credentials from the primary authenticator.                                         |
+| recover  | X          |         | Get a recovery signature from a backup authenticator, to replace the primary credential with a new one. |
 
 
 ### Client extension processing
@@ -475,7 +476,7 @@ A CBOR map with contents as defined above.
 - The RP MUST be very explicit in notifying the user when recovery credentials
   are registered, and how many, to avoid any credentials being registered
   without the user's knowledge. If possible, the client SHOULD also display the
-  number of backup authenticators associated with the main authenticator.
+  number of backup authenticators associated with the primary authenticator.
 
 - The RP SHOULD clearly display information about registered recovery
   credentials, just as it does with standard credentials. For example, the RP
@@ -485,16 +486,16 @@ A CBOR map with contents as defined above.
 - All security and privacy considerations for standard credentials also apply to
   recovery credentials.
 
-- Although recovery credentials are issued by the main authenticator, they can
-  only ever be used by the backup authenticator.
+- Although recovery credentials are issued by the primary authenticator, they
+  can only ever be used by the backup authenticator.
 
-- Recovery credentials are scoped to a specific RP ID, and the RP SHOULD
-  also associate each recovery credential with a specific main credential.
+- Recovery credentials are scoped to a specific RP ID, and the RP SHOULD also
+  associate each recovery credential with a specific primary credential.
 
 - Recovery credentials can only be used in registration ceremonies where the
   recovery extension is present, with `action == "recover"`.
 
-- A main authenticator MAY refuse to import a recovery seed without a trusted
+- A primary authenticator MAY refuse to import a recovery seed without a trusted
   attestation signature, to reduce the risk that an RP rejects the recovery
   credential that would later be generated by the backup authenticator.
 
@@ -777,9 +778,9 @@ ceremonies:
 
 ### Registering recovery credentials
 
-To register new recovery credentials for a given main credential, or replace the
-existing recovery credentials with updated ones, the RP performs the following
-procedure:
+To register new recovery credentials for a given primary credential, or replace
+the existing recovery credentials with updated ones, the RP performs the
+following procedure:
 
  1. Initiate a `get()` operation and set the extension `"recovery": {"action":
     "generate"}`.
@@ -823,9 +824,9 @@ procedure:
  1. Continue with the remaining steps of the standard authentication ceremony.
 
 
-### Using a recovery credential to replace a lost main credential
+### Using a recovery credential to replace a lost primary credential
 
-To authenticate the user with a recovery credential and create a new main
+To authenticate the user with a recovery credential and create a new primary
 credential, the RP performs the following procedure:
 
  1. Identify the user, for example by asking for a username.
@@ -869,9 +870,9 @@ credential, the RP performs the following procedure:
 
      1. Let `revokedCredId` be null.
 
-     1. For each `mainCredId` in the keys of `recoveryStates`:
+     1. For each `primaryCredId` in the keys of `recoveryStates`:
 
-         1. Let `(state, creds) = recoveryCreds[mainCredId]`.
+         1. Let `(state, creds) = recoveryCreds[primaryCredId]`.
 
          1. For each `cred` in `creds`:
 
@@ -892,7 +893,7 @@ credential, the RP performs the following procedure:
                     signature over `authenticatorDataWithoutExtensions || clientDataHash`.
                     If the signature is invalid, fail the registration ceremony.
 
-                 1. Set `revokedCredId = mainCredId`.
+                 1. Set `revokedCredId = primaryCredId`.
 
                  1. _Break._
 
@@ -923,8 +924,8 @@ IDs](#sctn-credential-id-privacy-leak).
 As an alternative to proceeding to register a new credential for the backup
 authenticator, the RP MAY choose to not replace the lost credential with the new
 one, and instead disable 2FA or provide some other means for the user to access
-their account. In either case, the associated main credential SHOULD be revoked
-and no longer usable.
+their account. In either case, the associated primary credential SHOULD be
+revoked and no longer usable.
 
 
 [att-cred-data]: https://w3c.github.io/webauthn/#attested-credential-data
