@@ -1,3 +1,6 @@
+_NOTE: This is a draft and **not implementation ready**. Security analysis is
+currently ongoing (2020-02-20)._
+
 # Introduction
 
 Web Authentication solves many problems in secure online authentication, but
