@@ -139,14 +139,14 @@ The following steps are performed by PA, the primary authenticator.
 
  6. Let `credential_id = E || LEFT(HMAC(mac_key, E || rp_id), 16)`.
 
- 7. Send the pair `(P, credential_id)` to RP for storage.
+ 7. Send the pair `(P, credential_id, rp_id)` to RP for storage.
 
 
 ## Stage 3: Private key derivation
 
 The following steps are performed by BA, the backup authenticator.
 
- 1. Retrieve a set of `credential_id`s from RP. Perform the following steps
+ 1. Retrieve a set of `rp_id`s and corresponding `credential_id`s from RP. Perform the following steps
     for each `credential_id`.
 
  1. Let `E = DROP_RIGHT(credential_id, 16)`. Verify that `E` is not the point at
