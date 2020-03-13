@@ -117,6 +117,7 @@ scheme.
     `S`.
  2. BA sends `S` to PA.
  3. RP chooses a unique public identifier `rp_id`.
+ 4. RP sends `rp_id` to PA.
 
 
 ## Stage 2: Public key creation
