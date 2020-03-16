@@ -116,7 +116,8 @@ scheme.
  1. BA generates a new P-256 EC key pair with private key `s` and public key
     `S`.
  2. BA sends `S` to PA.
- 3. RP chooses a unique public identifier `rp_id`.
+ 3. RP chooses a unique public identifier `rp_id`. This is effectively a
+    protocol constant and implicitly available to all parties at all times.
 
 
 ## Stage 2: Public key creation
