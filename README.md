@@ -620,9 +620,9 @@ Following operations are performed to get a recovery seed:
              1. Let `S_enc` be `S` encoded as described in [SEC 1][sec1], section
                 2.3.3, using point compression.
 
-             1. Let `sig` be an ECDSA signature over the data `alg || aaguid ||
-                S_enc` using the authenticator's attestation key and the SHA-256
-                hash algorithm. `sig` is DER encoded as described in [RFC
+             1. Let `sig` be a signature over the data `alg || aaguid || S_enc`
+                using the authenticator's attestation key and the SHA-256 hash
+                algorithm. `sig` is DER encoded as described in [RFC
                 3279][rfc3279].
 
              1. Authenticator returns authenticatorRecovery response with
