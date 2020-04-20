@@ -350,7 +350,7 @@ If `action` is
 
              1. Let `rpIdHash` be the SHA-256 hash of `rpId`.
 
-             1. Let `S_enc` be `E` encoded as described in [SEC 1][sec1], section
+             1. Let `E_enc` be `E` encoded as described in [SEC 1][sec1], section
                 2.3.3, using point compression.
 
              1. Set `credentialId = alg || E_enc || LEFT(HMAC-SHA-256(macKey, alg || E_enc ||
