@@ -4,20 +4,22 @@
 import base64
 import binascii
 import datetime
+import fastecdsa
+import hashlib
+import fastecdsa.keys
 import json
 import secrets
 import struct
 
 from collections import namedtuple
-from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.hmac import HMAC
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from cryptography.x509.oid import NameOID
+from fastecdsa import ecdsa
 from fastecdsa.curve import P256
+from fastecdsa.encoding.der import DEREncoder
+from fastecdsa.encoding.sec1 import SEC1Encoder
 from fastecdsa.point import Point
 from fido2 import cbor, cose, ctap2
 
@@ -27,23 +29,8 @@ BackupSeed = namedtuple('BackupSeed', ['alg', 'aaguid', 'pubkey'])
 N = P256.q
 
 
-def ecdh(pri_a, pub_b):
-    return pri_a * pub_b
-
-
-def fastecdsa_point_to_cryptography_pubkey(pub):
-    return (
-        ec.EllipticCurvePublicNumbers(pub.x, pub.y, ec.SECP256R1())
-        .public_key(default_backend()))
-
-
-def cryptography_to_point(pubkey):
-    nums = pubkey.public_numbers()
-    return Point(nums.x, nums.y, P256)
-
-
 def encode_pub(pubkey):
-    return pubkey.public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
+    return fastecdsa.keys.export_key(pubkey, encoder=SEC1Encoder)
 
 
 def sha256(data):
@@ -75,8 +62,25 @@ def b64d(data):
     return base64.urlsafe_b64decode(data_bytes + (b'=' * pad_length))
 
 
+def point_to_cose_key(point):
+    return {
+        1: 2,
+        3: -7,
+        -1: 1,
+        -2: fastecdsa.encoding.util.int_to_bytes(point.x),
+        -3: fastecdsa.encoding.util.int_to_bytes(point.y),
+    }
+
+
+def cose_key_to_point(cose):
+    return SEC1Encoder.decode_public_key(
+        b'\x04' + cose[-2] + cose[-3],
+        P256
+    )
+
+
 def pack_attested_credential_data(aaguid, cred_id, cred_pub):
-    cose_pubkey = cose.ES256.from_cryptography_key(cred_pub)
+    cose_pubkey = point_to_cose_key(cred_pub)
     cbor_pubkey = cbor.encode(cose_pubkey)
     return struct.pack(f'>16sH{len(cred_id)}s{len(cbor_pubkey)}s',
                        aaguid,
@@ -114,31 +118,10 @@ class Authenticator:
         self._state = 0
         self._credentials = {}
 
-        self._attestation_key = ec.generate_private_key(
-            ec.SECP256R1(),
-            default_backend())
-        att_cert_subject = issuer = x509.Name([
-            x509.NameAttribute(NameOID.COMMON_NAME, u'Yubico Test')
-        ])
-        attestation_cert = x509.CertificateBuilder().subject_name(
-            att_cert_subject
-        ).issuer_name(
-            issuer
-        ).public_key(
-            self._attestation_key.public_key()
-        ).serial_number(
-            x509.random_serial_number()
-        ).not_valid_before(
-            datetime.datetime.utcnow()
-        ).not_valid_after(
-            datetime.datetime.utcnow() + datetime.timedelta(days=10)
-        ).sign(self._attestation_key, hashes.SHA256(), default_backend())
-        self.attestation_cert_der = attestation_cert.public_bytes(Encoding.DER)
+        self._attestation_key = fastecdsa.keys.gen_private_key(P256)
 
     def _initialize_recovery_seed(self):
-        self._recovery_seed_pri_key = ec.generate_private_key(
-            ec.SECP256R1(),
-            default_backend())
+        self._recovery_seed_pri_key = fastecdsa.keys.gen_private_key(P256)
 
     def export_recovery_seed(self, allow_algs):
         for alg in allow_algs:
@@ -146,16 +129,20 @@ class Authenticator:
                 if self._recovery_seed_pri_key is None:
                     self._initialize_recovery_seed()
 
-                S = self._recovery_seed_pri_key.public_key()
+                S = fastecdsa.keys.get_public_key(self._recovery_seed_pri_key, P256)
                 S_enc = encode_pub(S)
 
                 signed_data = struct.pack('>B16s33s', alg, self._aaguid, S_enc)
-                sig = self._attestation_key.sign(
-                    signed_data,
-                    ec.ECDSA(hashes.SHA256()))
+                sig = DEREncoder.encode_signature(
+                    *ecdsa.sign(
+                        signed_data,
+                        self._attestation_key,
+                        hashfunc=hashlib.sha256
+                    )
+                )
                 payload = {
                     1: alg,
-                    2: [self.attestation_cert_der],
+                    2: [],
                     3: self._aaguid,
                     4: sig,
                     -1: S_enc,
@@ -167,30 +154,17 @@ class Authenticator:
     def import_recovery_seed(self, exported_seed):
         payload = cbor.decode(exported_seed)
         alg = payload[1]
-        attestation_cert_bytes = payload[2][0]
         aaguid = payload[3]
         sig = payload[4]
 
         assert isinstance(alg, int)
-        assert isinstance(attestation_cert_bytes, bytes)
         assert isinstance(aaguid, bytes)
         assert isinstance(sig, bytes)
 
         if alg == 0:
             S_enc = payload[-1]
             assert isinstance(S_enc, bytes)
-            S = ec.EllipticCurvePublicKey.from_encoded_point(
-                ec.SECP256R1(),
-                S_enc)
-
-            attestation_cert = x509.load_der_x509_certificate(
-                attestation_cert_bytes,
-                default_backend())
-            signed_data = struct.pack('>B16s33s', alg, aaguid, S_enc)
-            attestation_cert.public_key().verify(
-                sig,
-                signed_data,
-                ec.ECDSA(hashes.SHA256()))
+            S = SEC1Encoder().decode_public_key(S_enc, P256)
 
             self._seeds.append(BackupSeed(alg, aaguid, S))
 
@@ -209,17 +183,14 @@ class Authenticator:
         sign_count = 0
 
         credential_id = secrets.token_bytes(32)
-        credential_private_key = ec.generate_private_key(
-            ec.SECP256R1(),
-            default_backend()
-        )
+        (credential_private_key, credential_public_key) = fastecdsa.keys.gen_keypair(P256)
 
         self._credentials[credential_id] = credential_private_key
 
         attested_cred_data = pack_attested_credential_data(
             self._aaguid,
             credential_id,
-            credential_private_key.public_key(),
+            credential_public_key,
         )
 
         authData_without_extensions = struct.pack(
@@ -246,8 +217,14 @@ class Authenticator:
             0x02: authData,
             0x03: {
                 'alg': -7,
-                'sig': self._attestation_key.sign(authData + clientDataJSON_hash, ec.ECDSA(hashes.SHA256())),
-                'x5c': [self.attestation_cert_der]
+                'sig': DEREncoder.encode_signature(
+                    *ecdsa.sign(
+                        authData + clientDataJSON_hash,
+                        self._attestation_key,
+                        hashfunc=hashlib.sha256
+                    )
+                ),
+                'x5c': []
             },
         }
         return cbor.encode(attStmt)
@@ -283,9 +260,13 @@ class Authenticator:
         sig = None
         for cred_descriptor in args[0x03]:
             if cred_descriptor['id'] in self._credentials:
-                sig = self._credentials[cred_descriptor['id']].sign(
-                    authData + clientDataJSON_hash,
-                    ec.ECDSA(hashes.SHA256()))
+                sig = DEREncoder.encode_signature(
+                    *ecdsa.sign(
+                        authData + clientDataJSON_hash,
+                        self._credentials[cred_descriptor['id']],
+                        hashfunc=hashlib.sha256
+                    )
+                )
                 break
         if sig is None:
             raise NoCredentialAvailable()
@@ -354,11 +335,11 @@ class Authenticator:
                                mac)
 
         seed_pub = backup_seed.pubkey
-        eph_pri = ec.generate_private_key(ec.SECP256R1(), default_backend())
-        eph_pub = eph_pri.public_key()
+        eph_pri, eph_pub = fastecdsa.keys.gen_keypair(P256)
 
-        ikm = eph_pri.exchange(ec.ECDH(), seed_pub)
-        okm = hkdf(ikm, length=64)
+        ecdh_point = seed_pub * eph_pri
+        ikm_x = fastecdsa.encoding.util.int_to_bytes(ecdh_point.x)
+        okm = hkdf(ikm_x, length=64)
         cred_key = okm[0:32]
         cred_key_int = int.from_bytes(cred_key, 'big', signed=False)
 
@@ -366,11 +347,9 @@ class Authenticator:
 
         mac_key = okm[32:64]
 
-        seed_pub_point = cryptography_to_point(seed_pub)
-        cred_pub_point = (cred_key_int * P256.G) + seed_pub_point
-        assert cred_pub_point != P256.G.IDENTITY_ELEMENT
+        cred_pub = (cred_key_int * P256.G) + seed_pub
+        assert cred_pub != P256.G.IDENTITY_ELEMENT
 
-        cred_pub = fastecdsa_point_to_cryptography_pubkey(cred_pub_point)
         cred_id = pack_cred_id(eph_pub, rp_id, mac_key)
         cred_data = pack_attested_credential_data(backup_seed.aaguid, cred_id, cred_pub)
         return cred_data
@@ -394,9 +373,13 @@ class Authenticator:
                     cred_pri = self._derive_private_key(
                         self._recovery_seed_pri_key,
                         cred_id, rp_id)
-                    sig = cred_pri.sign(
-                        authData_without_extensions + clientDataHash,
-                        ec.ECDSA(hashes.SHA256()))
+                    sig = DEREncoder.encode_signature(
+                        *ecdsa.sign(
+                            authData_without_extensions + clientDataHash,
+                            cred_pri,
+                            hashfunc=hashlib.sha256
+                        )
+                    )
                 except RpIdMismatch:
                     continue
             else:
@@ -417,11 +400,12 @@ class Authenticator:
         if alg != 0:
             raise UnknownKeyAgreementScheme(alg)
 
-        eth_pub = ec.EllipticCurvePublicKey.from_encoded_point(
-            ec.SECP256R1(),
-            cred_id[1:-16])
-        ikm = seed_pri.exchange(ec.ECDH(), eth_pub)
-        okm = hkdf(ikm, length=64)
+        eph_pub_enc = cred_id[1:-16]
+        eph_pub = SEC1Encoder.decode_public_key(eph_pub_enc, P256)
+
+        ecdh_point = seed_pri * eph_pub
+        ikm_x = fastecdsa.encoding.util.int_to_bytes(ecdh_point.x)
+        okm = hkdf(ikm_x, length=64)
         cred_key = okm[0:32]
         cred_key_int = int.from_bytes(cred_key, 'big', signed=False)
 
@@ -429,11 +413,11 @@ class Authenticator:
         full_mac = hmac(mac_key,
                         struct.pack('>B33s32s',
                                     alg,
-                                    encode_pub(eth_pub),
+                                    eph_pub_enc,
                                     sha256(rp_id.encode('utf-8'))))
         mac = full_mac[0:16]
 
-        recon_cred_id = struct.pack('>B33s16s', alg, encode_pub(eth_pub), mac)
+        recon_cred_id = struct.pack('>B33s16s', alg, eph_pub_enc, mac)
         if cred_id != recon_cred_id:
             raise RpIdMismatch()
 
@@ -441,10 +425,7 @@ class Authenticator:
 
         mac_key = okm[32:64]
 
-        cred_pri = ec.derive_private_key(
-            (cred_key_int + seed_pri.private_numbers().private_value) % N,
-            ec.SECP256R1(),
-            default_backend())
+        cred_pri = cred_key_int + seed_pri % N
         return cred_pri
 
 
@@ -471,11 +452,15 @@ class RelyingParty:
             pass
         elif action == 'recover':
             authData_without_extensions = authData
-            self._recovery_credentials[
+            pubkey_cose = self._recovery_credentials[
                 extension_output['credId']
-            ].public_key.verify(
+            ].public_key
+            pubkey = cose_key_to_point(pubkey_cose)
+            assert ecdsa.verify(
+                DEREncoder.decode_signature(extension_output['sig']),
                 authData_without_extensions + clientDataHash,
-                extension_output['sig']
+                pubkey,
+                hashfunc=hashlib.sha256
             )
         else:
             raise UnknownAction()
