@@ -337,7 +337,7 @@ If `action` is
                 - `L`: 64.
 
              1. Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
-                32), 32)`.
+                32), 32)`, both parsed as big-endian unsigned 256-bit numbers.
 
              1. If `credKey >= n`, where `n` is the order of the P-256 curve,
                 start over from 1.
@@ -425,7 +425,7 @@ If `action` is
                 - `L`: 64.
 
              1. Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
-                32), 32)`.
+                32), 32)`, both parsed as big-endian unsigned 256-bit numbers.
 
              1. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
 
