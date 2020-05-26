@@ -50,7 +50,6 @@ The following terms are used throughout this document:
 
 - `LEFT(X, n)` is the first `n` bytes of the byte array `X`.
 - `DROP_LEFT(X, n)` is the byte array `X` without the first `n` bytes.
-- `DROP_RIGHT(X, n)` is the byte array `X` without the last `n` bytes.
 - CTAP2_ERR_XXX represents some not yet specified error code.
 
 
@@ -149,7 +148,7 @@ The following steps are performed by BA, the backup authenticator.
  1. Retrieve a set of `credential_id`s from RP. Perform the following steps
     for each `credential_id`.
 
- 1. Let `E = DROP_RIGHT(credential_id, 16)`. Verify that `E` is not the point at
+ 1. Let `E = LEFT(credential_id, 33)`. Verify that `E` is not the point at
     infinity.
 
  1. Use `HKDF(ECDH(s, E))` to derive `cred_key`, `mac_key`.
@@ -397,7 +396,7 @@ If `action` is
 
           - 0:
 
-             1. Let `E_enc = DROP_LEFT(DROP_RIGHT(cred.id, 16), 1)`.
+             1. Let `E_enc = LEFT(DROP_LEFT(cred.id, 1), 33)`.
 
              1. Let `E` be the P-256 public key decoded from the compressed point
                 `E_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,

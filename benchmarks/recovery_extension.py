@@ -400,7 +400,7 @@ class Authenticator:
         if alg != 0:
             raise UnknownKeyAgreementScheme(alg)
 
-        eph_pub_enc = cred_id[1:-16]
+        eph_pub_enc = cred_id[1:][:33]
         eph_pub = SEC1Encoder.decode_public_key(eph_pub_enc, P256)
 
         ecdh_point = seed_pri * eph_pub
