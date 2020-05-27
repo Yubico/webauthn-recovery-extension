@@ -901,7 +901,7 @@ credential, the RP performs the following procedure:
 
                  1. _Break._
 
-             1. Else, _continue_.
+             1. If `revokedCredId` is not null, _break_.
 
      1. If `revokedCredId` is null, abort the ceremony with an error.
 
