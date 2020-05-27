@@ -148,7 +148,7 @@ The following steps are performed by BA, the backup authenticator.
  1. Retrieve a set of `credential_id`s from RP. Perform the following steps
     for each `credential_id`.
 
- 1. Let `E = LEFT(credential_id, 33)`. Verify that `E` is not the point at
+ 1. Let `E = LEFT(credential_id, 65)`. Verify that `E` is not the point at
     infinity.
 
  1. Use `HKDF(ECDH(s, E))` to derive `cred_key`, `mac_key`.
@@ -396,7 +396,7 @@ If `action` is
 
           - 0:
 
-             1. Let `E_enc = LEFT(DROP_LEFT(cred.id, 1), 33)`.
+             1. Let `E_enc = LEFT(DROP_LEFT(cred.id, 1), 65)`.
 
              1. Let `E` be the P-256 public key decoded from the compressed point
                 `E_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
@@ -545,7 +545,7 @@ The RecoverySeed type is a CBOR map with the following structure:
   | aaguid (0x02) | Byte array | Required | AAGUID of the authenticator that exported the `payload`.
   | x5c (0x03) | Array of byte arrays | Required | Sequence of DER encoded X.509 attestation certificates
   | sig (0x04) | Byte array | Required | DER encoded ECDSA signature.
-  | S_enc (0xFF) | Byte array | Optional | Required if alg = 0x00. P-256 public key encoded as described in [SEC 1][sec1], section 2.3.4, using point compression.
+  | S_enc (0xFF) | Byte array | Optional | Required if alg = 0x00. P-256 public key encoded as described in [SEC 1][sec1], section 2.3.4, without point compression.
 
 On success, authenticator returns the following structure in its response:
 
@@ -617,7 +617,7 @@ Following operations are performed to get a recovery seed:
                 command MUST erase `s` and `S`.
 
              1. Let `S_enc` be `S` encoded as described in [SEC 1][sec1], section
-                2.3.3, using point compression.
+                2.3.3, without point compression.
 
              1. Let `sig` be a signature over the data `alg || aaguid || S_enc`
                 using the authenticator's attestation key and the SHA-256 hash
@@ -663,7 +663,7 @@ Following operations are performed to get a recovery seed:
     - x5c (0x03): Attestation certificate chain of the authenticator that
       exported the seed
     - sig (0x04): Attestation signature over the seed contents
-    - S_enc (0xFF): Required if alg = 0x00. EC public key encoded with point compression.
+    - S_enc (0xFF): Required if alg = 0x00. EC public key encoded without point compression.
 
   - pinUvAuthProtocol (0x04): Pin Protocol used. Currently this is 0x01.
   - pinUvAuthParam (0x05): `LEFT(HMAC-SHA-256(pinUvAuthToken, importSeed
@@ -688,7 +688,7 @@ Following operations are performed to get a recovery seed:
 
       - 0:
 
-         1. Let `S` be the P-256 public key decoded from the compressed point
+         1. Let `S` be the P-256 public key decoded from the uncompressed point
             `S_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
             return CTAP2_ERR_XXX.
 

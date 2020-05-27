@@ -30,7 +30,7 @@ N = P256.q
 
 
 def encode_pub(pubkey):
-    return fastecdsa.keys.export_key(pubkey, encoder=SEC1Encoder)
+    return SEC1Encoder().encode_public_key(pubkey, compressed=False)
 
 
 def sha256(data):
@@ -132,7 +132,7 @@ class Authenticator:
                 S = fastecdsa.keys.get_public_key(self._recovery_seed_pri_key, P256)
                 S_enc = encode_pub(S)
 
-                signed_data = struct.pack('>B16s33s', alg, self._aaguid, S_enc)
+                signed_data = struct.pack('>B16s65s', alg, self._aaguid, S_enc)
                 sig = DEREncoder.encode_signature(
                     *ecdsa.sign(
                         signed_data,
@@ -319,19 +319,19 @@ class Authenticator:
             raise UnknownKeyAgreementScheme(backup_seed.alg)
 
         def pack_cred_id(eph_pub, rp_id, mac_key):
-            compressed_pubkey = encode_pub(eph_pub)
+            uncompressed_pubkey = encode_pub(eph_pub)
             rp_id_hash = sha256(rp_id.encode('utf-8'))
 
             full_mac = hmac(mac_key,
-                            struct.pack('>B33s32s',
+                            struct.pack('>B65s32s',
                                         backup_seed.alg,
-                                        compressed_pubkey,
+                                        uncompressed_pubkey,
                                         rp_id_hash))
             mac = full_mac[0:16]
 
-            return struct.pack('>B33s16s',
+            return struct.pack('>B65s16s',
                                backup_seed.alg,
-                               compressed_pubkey,
+                               uncompressed_pubkey,
                                mac)
 
         seed_pub = backup_seed.pubkey
@@ -400,7 +400,7 @@ class Authenticator:
         if alg != 0:
             raise UnknownKeyAgreementScheme(alg)
 
-        eph_pub_enc = cred_id[1:][:33]
+        eph_pub_enc = cred_id[1:][:65]
         eph_pub = SEC1Encoder.decode_public_key(eph_pub_enc, P256)
 
         ecdh_point = seed_pri * eph_pub
@@ -411,13 +411,13 @@ class Authenticator:
 
         mac_key = okm[32:64]
         full_mac = hmac(mac_key,
-                        struct.pack('>B33s32s',
+                        struct.pack('>B65s32s',
                                     alg,
                                     eph_pub_enc,
                                     sha256(rp_id.encode('utf-8'))))
         mac = full_mac[0:16]
 
-        recon_cred_id = struct.pack('>B33s16s', alg, eph_pub_enc, mac)
+        recon_cred_id = struct.pack('>B65s16s', alg, eph_pub_enc, mac)
         if cred_id != recon_cred_id:
             raise RpIdMismatch()
 
