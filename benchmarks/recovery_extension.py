@@ -45,12 +45,12 @@ def hmac(key, data):
     return hmac.finalize()
 
 
-def hkdf(ikm, length=64):
+def hkdf(ikm, info, length=32):
     hkdf = HKDF(
         algorithm=hashes.SHA256(),
         length=length,
         salt=None,
-        info=None,
+        info=info,
         backend=default_backend(),
     )
     return hkdf.derive(ikm)
@@ -339,13 +339,12 @@ class Authenticator:
 
         ecdh_point = seed_pub * eph_pri
         ikm_x = fastecdsa.encoding.util.int_to_bytes(ecdh_point.x)
-        okm = hkdf(ikm_x, length=64)
-        cred_key = okm[0:32]
+        cred_key = hkdf(ikm_x, "webauthn.recovery.cred_key".encode('utf-8'), length=32)
         cred_key_int = int.from_bytes(cred_key, 'big', signed=False)
 
         assert cred_key_int < N, "cred_key >= N: " + str(cred_key_int)
 
-        mac_key = okm[32:64]
+        mac_key = hkdf(ikm_x, "webauthn.recovery.mac_key".encode('utf-8'), length=32)
 
         cred_pub = (cred_key_int * P256.G) + seed_pub
         assert cred_pub != P256.G.IDENTITY_ELEMENT
@@ -405,11 +404,10 @@ class Authenticator:
 
         ecdh_point = seed_pri * eph_pub
         ikm_x = fastecdsa.encoding.util.int_to_bytes(ecdh_point.x)
-        okm = hkdf(ikm_x, length=64)
-        cred_key = okm[0:32]
+        cred_key = hkdf(ikm_x, binascii.a2b_hex('776562617574686e2e7265636f766572792e637265645f6b6579'), length=32)
         cred_key_int = int.from_bytes(cred_key, 'big', signed=False)
 
-        mac_key = okm[32:64]
+        mac_key = hkdf(ikm_x, binascii.a2b_hex('776562617574686e2e7265636f766572792e6d61635f6b6579'), length=32)
         full_mac = hmac(mac_key,
                         struct.pack('>B65s32s',
                                     alg,
@@ -422,8 +420,6 @@ class Authenticator:
             raise RpIdMismatch()
 
         assert cred_key_int < N, "cred_key >= N: " + str(cred_key_int)
-
-        mac_key = okm[32:64]
 
         cred_pri = cred_key_int + seed_pri % N
         return cred_pri

@@ -320,23 +320,23 @@ If `action` is
                 encoded as a byte string of length 32 as described in
                 [SEC 1][sec1], section 2.3.7.
 
-             1. Let `prk` be the pseudorandom key output from [HKDF-Extract][hkdf]
+             1. Let `credKey` be the 32 bytes of output keying material from [HKDF-SHA-256][hkdf]
                 with the arguments:
 
-                - `Hash`: SHA-256.
                 - `salt`: Not set.
                 - `IKM`: `ikm_x`.
+                - `info`: The string `webauthn.recovery.cred_key` encoded as a UTF-8 byte string.
+                - `L`: 32.
 
-             1. Let `okm` be 64 bytes of output keying material from [HKDF-Expand][hkdf]
+                Parse `credKey` as a big-endian unsigned 256-bit number.
+
+             1. Let `macKey` be the 32 bytes of output keying material from [HKDF-SHA-256][hkdf]
                 with the arguments:
 
-                - `Hash`: SHA-256.
-                - `PRK`: `prk`.
-                - `info`: Not set.
-                - `L`: 64.
-
-             1. Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
-                32), 32)`, both parsed as big-endian unsigned 256-bit numbers.
+                - `salt`: Not set.
+                - `IKM`: `ikm_x`.
+                - `info`: The string `webauthn.recovery.mac_key` encoded as a UTF-8 byte string.
+                - `L`: 32.
 
              1. If `credKey >= n`, where `n` is the order of the P-256 curve,
                 start over from 1.
@@ -423,8 +423,23 @@ If `action` is
                 - `info`: Not set.
                 - `L`: 64.
 
-             1. Let `credKey = LEFT(okm, 32)` and `macKey = LEFT(DROP_LEFT(okm,
-                32), 32)`, both parsed as big-endian unsigned 256-bit numbers.
+             1. Let `credKey` be the 32 bytes of output keying material from [HKDF-SHA-256][hkdf]
+                with the arguments:
+
+                - `salt`: Not set.
+                - `IKM`: `ikm_x`.
+                - `info`: The string `webauthn.recovery.cred_key` encoded as a UTF-8 byte string.
+                - `L`: 32.
+
+                Parse `credKey` as a big-endian unsigned 256-bit number.
+
+             1. Let `macKey` be the 32 bytes of output keying material from [HKDF-SHA-256][hkdf]
+                with the arguments:
+
+                - `salt`: Not set.
+                - `IKM`: `ikm_x`.
+                - `info`: The string `webauthn.recovery.mac_key` encoded as a UTF-8 byte string.
+                - `L`: 32.
 
              1. Let `rpIdHash` be the SHA-256 hash of `rp.id`.
 
