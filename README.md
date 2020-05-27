@@ -922,8 +922,7 @@ credential, the RP performs the following procedure:
     registered credential.
 
 When identifying the user and building the `allowCredentials` list, please
-consider the [risk of privacy leak via Credential
-IDs](#sctn-credential-id-privacy-leak).
+consider the [risk of privacy leak via Credential IDs][privacy-cons].
 
 As an alternative to proceeding to register a new credential for the backup
 authenticator, the RP MAY choose to not replace the lost credential with the new
@@ -936,6 +935,7 @@ revoked and no longer usable.
 [authdata]: https://w3c.github.io/webauthn/#authenticator-data
 [ctap2-canon]: https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#ctap2-canonical-cbor-encoding-form
 [hkdf]: https://tools.ietf.org/html/rfc5869
+[privacy-cons]: https://www.w3.org/TR/2019/WD-webauthn-2-20191126/#sctn-credential-id-privacy-leak
 [rfc3279]: https://tools.ietf.org/html/rfc3279.html
 [rp-auth-ext-processing]: https://w3c.github.io/webauthn/#sctn-verifying-assertion
 [rp-reg-ext-processing]: https://w3c.github.io/webauthn/#sctn-registering-a-new-credential
