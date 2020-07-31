@@ -112,10 +112,13 @@ The scheme is divided into three stages ordered in this forward sequence:
 This procedure is performed once to set up the parameters for the key agreement
 scheme.
 
- 1. BA generates a new P-256 EC key pair with private key `s` and public key
+ 1. PA and BA agree on a choice of two key derivation functions `KDF1` and
+    `KDF2`, and one message authentication code (MAC) function `MAC`. `KDF1`
+    outputs integers and `KDF2` outputs values suitable as key inputs for `MAC`.
+ 2. BA generates a new P-256 EC key pair with private key `s` and public key
     `S`.
- 2. BA sends `S` to PA.
- 3. RP chooses a unique public identifier `rp_id`. This is effectively a
+ 3. BA sends `S` to PA.
+ 4. RP chooses a unique public identifier `rp_id`. This is effectively a
     protocol constant and implicitly available to all parties at all times.
 
 
@@ -125,8 +128,7 @@ The following steps are performed by PA, the primary authenticator.
 
  1. Generate an ephemeral EC P-256 key pair: `e`, `E`.
 
- 2. Use `HKDF(ECDH(e, S))` to derive `cred_key`, `mac_key` (both 32 byte
-    keys).
+ 2. Let `cred_key = KDF1(ECDH(e, S))` and `mac_key = KDF2(ECDH(e, S))`.
 
  3. If `cred_key >= n`, where `n` is the order of the P-256 curve, start
     over from 1.
@@ -136,7 +138,7 @@ The following steps are performed by PA, the primary authenticator.
 
  5. If `P` is the point at infinity, start over from 1.
 
- 6. Let `credential_id = E || LEFT(HMAC(mac_key, E || rp_id), 16)`.
+ 6. Let `credential_id = E || LEFT(MAC(mac_key, E || rp_id), 16)`.
 
  7. Send the pair `(P, credential_id)` to RP for storage.
 
@@ -151,9 +153,9 @@ The following steps are performed by BA, the backup authenticator.
  1. Let `E = LEFT(credential_id, 65)`. Verify that `E` is not the point at
     infinity.
 
- 1. Use `HKDF(ECDH(s, E))` to derive `cred_key`, `mac_key`.
+ 1. Let `cred_key = KDF1(ECDH(e, S))` and `mac_key = KDF2(ECDH(e, S))`.
 
- 1. Verify that `credential_id == E || LEFT(HMAC(mac_key, E || rp_id), 16)`. If
+ 1. Verify that `credential_id == E || LEFT(MAC(mac_key, E || rp_id), 16)`. If
     not, this `credential_id` was generated for a different backup authenticator
     than BA or a different relying party than RP, and is not processed further.
 
