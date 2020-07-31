@@ -410,21 +410,6 @@ If `action` is
                 encoded as a byte string of length 32 as described in
                 [SEC 1][sec1], section 2.3.7.
 
-             1. Let `prk` be the pseudorandom key output from [HKDF-Extract][hkdf]
-                with the arguments:
-
-                - `Hash`: SHA-256.
-                - `salt`: Not set.
-                - `IKM`: `ikm_x`.
-
-             1. Let `okm` be 64 bytes of output keying material from [HKDF-Expand][hkdf]
-                with the arguments:
-
-                - `Hash`: SHA-256.
-                - `PRK`: `prk`.
-                - `info`: Not set.
-                - `L`: 64.
-
              1. Let `credKey` be the 32 bytes of output keying material from [HKDF-SHA-256][hkdf]
                 with the arguments:
 
