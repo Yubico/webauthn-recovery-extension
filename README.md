@@ -352,7 +352,7 @@ If `action` is
              1. Let `rpIdHash` be the SHA-256 hash of `rpId`.
 
              1. Let `E_enc` be `E` encoded as described in [SEC 1][sec1], section
-                2.3.3, using point compression.
+                2.3.3, without point compression.
 
              1. Set `credentialId = alg || E_enc || LEFT(HMAC-SHA-256(macKey, alg || E_enc ||
                 rpIdHash), 16)`.
@@ -400,7 +400,7 @@ If `action` is
 
              1. Let `E_enc = LEFT(DROP_LEFT(cred.id, 1), 65)`.
 
-             1. Let `E` be the P-256 public key decoded from the compressed point
+             1. Let `E` be the P-256 public key decoded from the uncompressed point
                 `E_enc` as described in [SEC 1][sec1], section 2.3.4. If invalid,
                 return CTAP2_ERR_XXX.
 
