@@ -1,5 +1,4 @@
-_NOTE: This is a draft and **not implementation ready**. Security analysis is
-currently ongoing (2020-02-20)._
+_NOTE: This is a draft and **not implementation ready**. Security analysis: https://eprint.iacr.org/2020/1004 (published at https://sigsac.org/ccs/CCS2020/)._
 
 Authors: Emil Lundberg, Dain Nilsson
 
