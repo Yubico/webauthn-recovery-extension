@@ -271,6 +271,7 @@ class Authenticator:
             raise NoCredentialAvailable()
 
         return cbor.encode({
+            0x01: cred_descriptor,
             0x02: authData,
             0x03: sig,
         })
@@ -532,13 +533,14 @@ def get_assertion(authenticator, request_json):
     authenticator_response = cbor.decode(authenticator.authenticator_get_assertion(cbor.encode({
         0x01: pkcro['rpId'],
         0x02: clientDataJSON_hash,
+        0x03: [{'id': base64.urlsafe_b64decode(c['id']), 'type': 'public-key'} for c in pkcro['allowCredentials']],
         0x04: pkcro['extensions'],
     })))
     authenticatorData = authenticator_response[0x02]
     sig = authenticator_response[0x03]
     credential = {
         'type': 'public-key',
-        'id': base64.urlsafe_b64encode(authenticator._credential_id).decode('utf-8'),
+        'id': base64.urlsafe_b64encode(authenticator_response[0x01]['id']).decode('utf-8'),
         'response': {
             'authenticatorData': base64.urlsafe_b64encode(authenticatorData).decode('utf-8'),
             'clientDataJSON': base64.urlsafe_b64encode(clientDataJSON).decode('utf-8'),
