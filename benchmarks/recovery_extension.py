@@ -220,11 +220,10 @@ class Authenticator:
                 'sig': DEREncoder.encode_signature(
                     *ecdsa.sign(
                         authData + clientDataJSON_hash,
-                        self._attestation_key,
+                        credential_private_key,
                         hashfunc=hashlib.sha256
                     )
                 ),
-                'x5c': []
             },
         }
         return cbor.encode(attStmt)
