@@ -152,7 +152,7 @@ The following steps are performed by BA, the backup authenticator.
  1. Let `E = LEFT(credential_id, 65)`. Verify that `E` is not the point at
     infinity.
 
- 1. Let `cred_key = KDF1(ECDH(e, S))` and `mac_key = KDF2(ECDH(e, S))`.
+ 1. Let `cred_key = KDF1(ECDH(s, E))` and `mac_key = KDF2(ECDH(s, E))`.
 
  1. Verify that `credential_id == E || LEFT(MAC(mac_key, E || rp_id), 16)`. If
     not, this `credential_id` was generated for a different backup authenticator
