@@ -170,6 +170,53 @@ As a result of these procedures, BA will have derived `p` such that
           = cred_key * G +     S = P.
 
 
+## Protocol weaknesses
+
+Although it was shown by Frymann et al. [1] that derived public keys `P` are
+unlinkable, it was brought to our attention by Wilson [2] that a weakness exists
+in this generic protocol: a user who has multiple accounts can be tricked by a
+malicous RP into revealing their ownership of both accounts.
+
+The attack proceeds as follows:
+
+1. The user performs the procedure defined above in "public key creation" twice,
+   resulting in two distinct public keys `P1` and `P2`, with respective
+   credential ID `credential_id1` and `credential_id2`. The user registers
+   (`P1`, `credential_id1`) as a recovery key for account `A1` at the RP, and
+   registers (`P2`, `credential_id2`) as a recovery key for account `A2` at the
+   same RP.
+
+1. The user initiates the recovery procedure for account `A1`, expecting the RP
+   to respond with an authentication challenge with `credential_id1` to be
+   signed by `P1`.
+
+1. The RP instead responds with an authentication challenge with
+   `credential_id2`. Since this is also a valid credential ID for the same RP
+   ID, the user's backup authenticator successfully produces an authentication
+   signature signed by `P2`.
+
+1. Since `P2` is registered to account `A2`, the RP can conclude that the user
+   most likely owns both `A1` and `A2`.
+
+This account linking attack is possible in the WebAuthn protocol without the
+`recovery` extension proposed below, so this weakness does not introduce any new
+weakness when used in the WebAuthn context. However, this weakness should be
+taken into account should this protocol be applied in other contexts where it
+would introduce a new weakness. In that case, this weakness could possibly be
+mitigated by including some form of account identifier in the MAC embedded in
+the `credential_id`; this way the client and authenticator could cooperate to
+detect if the RP responds with `credential_id`s for a different account than the
+user requested.
+
+- [1]: Frymann et al., "Asynchronous Remote Key Generation: An Analysis of
+  Yubico's Proposal for W3C WebAuthn". Proceedings of the 2020 ACM SIGSAC
+  Conference on Computer and Communications Security, 2020.
+  https://doi.org/10.1145/3372297.3417292
+- [2]: Wilson, Spencer MacLaren, "Post-Quantum Account Recovery for Passwordless
+  Authentication". Master Thesis, University of Waterloo, 2023.
+  https://uwspace.uwaterloo.ca/bitstream/handle/10012/19316/Wilson_SpencerMacLaren.pdf
+
+
 # Application: WebAuthn extension
 
 This section proposes an application of the above key agreement scheme as a
