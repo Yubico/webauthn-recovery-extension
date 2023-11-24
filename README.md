@@ -206,7 +206,7 @@ would introduce a new weakness. In that case, this weakness could possibly be
 mitigated by including some form of account identifier in the MAC embedded in
 the `credential_id`; this way the client and authenticator could cooperate to
 detect if the RP responds with `credential_id`s for a different account than the
-user requested.
+user requested. See [2] for additional detail.
 
 - [1]: Frymann et al., "Asynchronous Remote Key Generation: An Analysis of
   Yubico's Proposal for W3C WebAuthn". Proceedings of the 2020 ACM SIGSAC
