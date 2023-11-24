@@ -214,7 +214,7 @@ user requested.
   https://doi.org/10.1145/3372297.3417292
 - [2]: Wilson, Spencer MacLaren, "Post-Quantum Account Recovery for Passwordless
   Authentication". Master Thesis, University of Waterloo, 2023.
-  https://uwspace.uwaterloo.ca/bitstream/handle/10012/19316/Wilson_SpencerMacLaren.pdf
+  https://uwspace.uwaterloo.ca/handle/10012/19316
 
 
 # Application: WebAuthn extension
